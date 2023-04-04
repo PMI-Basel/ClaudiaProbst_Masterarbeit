@@ -1,0 +1,124 @@
+---
+title: "Standard Curve Accu Clear DNA extraction"
+author: "Claudia Probst"
+date: "27/10/2022"
+output: html_document
+---
+
+```{r global-options, include=FALSE}
+
+##clear the objects from memory
+rm(list=ls())
+
+knitr::opts_chunk$set(fig.width=12, fig.height=8, fig.path='Figs/',
+                      echo=FALSE, warning=FALSE, message=FALSE)
+```
+
+```{r lirary loading, warning=FALSE, include=FALSE}
+
+library(tidyverse)
+library(readxl)
+library(ggpubr)
+library(viridis)
+library(RColorBrewer)
+library(devtools)
+library(MetBrewer)
+library(rio)
+library(xlsx)
+library(hrbrthemes)
+update_geom_font_defaults()
+```
+
+```{r import data, warning=FALSE, include=FALSE, echo=FALSE}
+# set working directory
+setwd("~/Desktop/MASTER Pflanzenwissenschaften/Experiments/Microbiota analysis/DNA_concentration_AccuClear")
+# import data: example for 1 plate
+# Metadata/ Exp design
+
+metadata <- read_excel("AccuClearQuantificationAssay.xlsx", 
+    sheet = "Layout")
+
+# Standard concentrations table
+
+Sample <- c("0.03 Standard", "0.1 Standard", "0.3 Standard", "1 Standard","3 Standard", "10 Standard", "25 Standard")
+concentrations <- c(0.03, 0.1, 0.3, 1, 3, 10, 25)
+standards <- data.frame(Sample, concentrations)
+
+# Read data
+data_raw_blanked <- read_excel("27.10.22_results_DNA_measurement.xlsx", range = "B50:O66") %>% 
+  rename(Row=`...1`) %>% 
+  rename(Reading=`...14`) %>% 
+  filter(row_number() %% 2 == 0) %>% # filter out unblanked reads
+  mutate(Row=rep(LETTERS, length.out=8)) %>% # add row name
+  select(!where(is.logical)) %>% # filter out rows that were empty (NAs)
+  pivot_longer(`1`:`12`, names_to = "Column", values_to = "Intensity") %>% 
+  select(!Reading) %>% 
+  unite("Well", c(Row,Column), sep="", remove = TRUE) %>% 
+  left_join(., metadata, by = "Well") %>% 
+  full_join(., standards) %>% 
+  unite("Sample", c(Sample,Rep), sep="_", remove = TRUE)
+
+data_standards <- data_raw_blanked %>% 
+  filter(Type=="Standard") 
+
+data_samples <- data_raw_blanked %>% 
+  filter(Type=="Sample") %>% 
+  select(Sample,Intensity) %>% 
+  column_to_rownames(var = "Sample")
+
+
+```
+
+```{r linear regression, warning=FALSE, message=FALSE}
+
+standards.lm <- lm(concentrations~Intensity, data = data_standards)
+summary(standards.lm )
+
+#Check if assumptions of model are fullfilled
+plot(standards.lm)
+E <- resid(standards.lm)
+shapiro.test(E) # test for normality
+#first plot gives info about linearity (line should be more or less straight), second plot about normality of the errors, third about homoscedacicety (line should be straight)
+
+# Plot model
+standards.lm.graph <-data_standards %>%  
+  ggplot(aes(x=Intensity, y=concentrations))+
+    geom_point()+ 
+    geom_smooth(method="lm", col="black") + 
+    stat_regline_equation(label.x = 3, label.y = 7)
+standards.lm.graph
+ggsave("standard_linear_regression.png", width = 7, height = 3) 
+
+
+# Predict DNA concentrations of samples
+predictions <- predict(standards.lm, newdata =  data_samples, interval = 'confidence')
+predictions
+
+
+# Calculate mean concentration based on predictions
+#mean_predictions <- as.data.frame(predictions) %>% 
+#  rownames_to_column(var="Sample") %>% 
+#  separate(Sample, c("Sample", "Replicate"), sep = "_") %>% 
+# select(Sample, Replicate, fit) %>% 
+#  group_by(Sample) %>% 
+#  summarise(mean=mean(fit),
+#            sd = sd(fit),
+#            se = sd(fit) / sqrt(n()),
+#            max = mean+se,
+#            min = mean-se,
+#            N=n()) 
+
+# write_xlsx(mean_predictions,"DNAAveraged.xlsx")
+write_xlsx(as.data.frame(predctions),"DNAQuan.xlsx")
+export(as.data.frame(predictions),row.names = TRUE, "DNAQuan.xlsx")
+#rownames to column für eine neue Spalte mit den Namen 
+
+```
+Note: the AccuClear assay is supposedly linear between: 0.03 ng and 250 ng per assay -> 3 pg/µL and 25 ng/µL samples concentration.
+
+```{r tables ionLists, echo=FALSE, results='asis'}
+
+knitr::kable(predictions, caption = "Calculated DNA concentrations [ng/µL]")
+
+```
+Sample 15 = 2 root; Sample 16 = 23 root; sample 17 = cpos; sample 18 = cneg

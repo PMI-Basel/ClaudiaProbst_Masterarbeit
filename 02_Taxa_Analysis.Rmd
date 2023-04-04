@@ -1,0 +1,702 @@
+---
+title: "Microbiota profiling in consideration of varying P-levels (hamPCR): Taxonomy Analysis"
+author: "Claudia Probst based on Jan Waelchli and Charlotte Joller"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+  html_document:
+    toc: yes
+    toc_depth: '3'
+    df_print: paged
+geometry: margin=2cm
+editor_options:
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE, echo=F, warning=F, message=F,}
+
+##clear the object from memory
+rm(list=ls())
+
+#knitr settings
+knitr::opts_chunk$set(echo=TRUE, fig.align="center")
+options(tinytex.verbose = TRUE)
+
+#set seed
+set.seed(100)
+
+#paths
+paths <- list(wd = c("~/Desktop/MASTER Pflanzenwissenschaften/Experiments/Microbiota analysis/Results"),
+         functions="~/Desktop/MASTER Pflanzenwissenschaften/Experiments/Microbiota analysis/Results/functions/")
+
+## set source
+setwd(paths$wd)
+
+## load functions
+source(paste0(paths$functions,"functions.R"))
+functions(path=paths$functions)
+
+## installs (if necessary) and loads libraries
+#libraries()
+library(conflicted)
+conflict_prefer("filter", "dplyr")
+conflict_prefer("rename", "dplyr")
+conflict_prefer("select", "dplyr")
+conflict_prefer("mutate", "dplyr")
+conflict_prefer("arrange", "dplyr")
+conflict_prefer("summarise", "dplyr")
+library(dplyr)
+library(tidyverse)
+library(hrbrthemes)
+update_geom_font_defaults()
+library(viridis)
+library(MetBrewer)
+library(readxl)
+library(cowplot)
+library(phyloseq)
+library(pander)
+library(rstatix)
+library(writexl)
+
+```
+
+```{r import, echo=F, message=F, warning=F}
+
+# Import
+
+# set wd to RDS files
+setwd("~/Desktop/MASTER Pflanzenwissenschaften/Experiments/Microbiota analysis/Results/interim/01_Import_Normalization")
+
+#Import RDS files
+DESIGN <- readRDS("DESIGN.RDS")
+bDAT_rare <- readRDS("bDAT_rare.RDS")
+TAX <- readRDS("TAX.RDS")
+bDAT_rare <- readRDS("bDAT_rare.RDS")
+inputDAT_rare <-readRDS("inputDAT_rare.RDS")
+
+TAX_level_cols_phyla <- readRDS("TAX_level_cols_phyla.RDS")
+TAX_level_cols_famgen <- readRDS("TAX_level_cols_famgen.RDS")
+TAX_level_cols_SynCom <- readRDS("TAX_level_cols_SynCom.RDS")
+level_cols_type <- readRDS("level_cols_type.RDS")
+level_cols_SynCom9 <- readRDS("level_cols_SynCom9.RDS")
+level_cols_treatment <- readRDS("level_cols_treatment.RDS")
+
+```
+
+```{r data physeq, echo=F, warning=F, message=F}
+# Data as PHYLOSEQ object
+
+#change order for melting later
+#When "melting" a PHYLOSEQ object, the taxonomic levels coming BEFORE the one chosen for data aglomeration (tax_glom function) will be retained. (So only higher order phylogenetic information than the one chosen for aglomeration)
+TAX <- TAX[,c("label_phyla", "label", "SynComStrain","kingdom", "phylum", "class", "order", "family", "genus", "ASV_ID","cols_famgen" ,"cols_phyla", "cols_SynCom")]
+
+
+#create phyloseq objects
+DESIGN <- as.data.frame(DESIGN)
+rownames(DESIGN) <- DESIGN$AccessArray
+bDAT_rare <- as.matrix(bDAT_rare)
+TAX <- as.matrix(TAX[rownames(bDAT_rare),])
+bPHYSEQ <- phyloseq(sample_data(DESIGN),
+                   otu_table(bDAT_rare, taxa_are_rows=T),
+                   tax_table(TAX))
+
+# agglomerate data by phyla,SynCom  or ASV_ID labels 
+bPHYSEQ_phyla <- tax_glom(bPHYSEQ, "label_phyla") # merge by 'label_phyla' 
+bPHYSEQ_phyla <- transform_sample_counts(bPHYSEQ_phyla, function(x) 100 * x/sum(x)) 
+
+bPHYSEQ_famgen <- tax_glom(bPHYSEQ, "label") # merge by famgen
+bPHYSEQ_famgen <- transform_sample_counts(bPHYSEQ_famgen, function(x) 100 * x/sum(x))
+
+bPHYSEQ_SynCom9 <- tax_glom(bPHYSEQ, "SynComStrain") # merge by 'SynComStrain' 
+bPHYSEQ_SynCom9 <- transform_sample_counts(bPHYSEQ_SynCom9, function(x) 100 * x/sum(x))
+
+# melt phyloseq objects
+bPHYSEQ_phyla_melt <- psmelt(bPHYSEQ_phyla)
+bPHYSEQ_famgen_melt <- psmelt(bPHYSEQ_famgen)
+bPHYSEQ_Syn_melt <- psmelt(bPHYSEQ_SynCom9)
+
+#write_xlsx(bPHYSEQ_Syn_melt, "~/Desktop/MASTER Pflanzenwissenschaften/Experiments/Microbiota analysis/Results/list_bPHYSEQ_Syn_melt.xlsx")
+```
+# Taxonomy
+
+## Relative abundance plot
+
+We get an overview over the abundance of bacterial taxonomy by showing the genus for each sample.
+
+### Figure 4 | Genus level taxonomy
+
+```{r relabundance_plot_genus, echo=F, warning=F, message=F, fig.height=5, fig.width=7}
+
+#sort
+bPHYSEQ_phyla_melt <- bPHYSEQ_phyla_melt[order(bPHYSEQ_phyla_melt$type),]
+
+#Reorder levels of the label for plot
+bPHYSEQ_phyla_melt$label_phyla <- factor(bPHYSEQ_phyla_melt$label_phyla, levels = c("Host","Alphaproteobacteria", "Gammaproteobacteria", "Actinobacteria", "Firmicutes"))
+bPHYSEQ_phyla_melt$type <- factor(bPHYSEQ_phyla_melt$type, levels=c("roots", "sorbix"))
+bPHYSEQ_phyla_melt$treatment <- factor(bPHYSEQ_phyla_melt$treatment, levels = c("high P", "medium P", "low P"))
+
+#sort
+bPHYSEQ_famgen_melt <- bPHYSEQ_famgen_melt[order(bPHYSEQ_famgen_melt$type),]
+bPHYSEQ_famgen_melt <- bPHYSEQ_famgen_melt[order(bPHYSEQ_famgen_melt$label_phyla),]
+#Reorder levels of the label for plot
+bPHYSEQ_famgen_melt$label <- factor(bPHYSEQ_famgen_melt$label, levels = c("Pseudomonadaceae_Pseudomonas" , "Pseudomonadaceae_unassigned" , "Rhodanobacteraceae_Luteibacter" ,"Rhodanobacteraceae_unassigned" ,"Burkholderiaceae_Variovorax","Rhizobiaceae_Ensifer" ,
+"Rhizobiaceae_unassigned" , "Labraceae_Labrys" ,"Nocardioidaceae_Nocardioides" , "Planococcaceae_Domibacillus","Planococcaceae_unassigned",
+"Host", "unassigned"))
+#bPHYSEQ_famgen_melt$label <- factor(bPHYSEQ_famgen_melt$label, levels = c(bPHYSEQ_famgen_melt$label))
+bPHYSEQ_famgen_melt$type <- factor(bPHYSEQ_famgen_melt$type, levels=c("roots", "sorbix"))
+bPHYSEQ_famgen_melt$SynCom9 <- factor(bPHYSEQ_famgen_melt$SynCom9, levels = c("yes", "no"))
+bPHYSEQ_famgen_melt$treatment <- factor(bPHYSEQ_famgen_melt$treatment, levels = c("high P", "medium P", "low P"))
+
+#sort
+bPHYSEQ_Syn_melt <- bPHYSEQ_Syn_melt[order(bPHYSEQ_Syn_melt$type),]
+bPHYSEQ_Syn_melt <- bPHYSEQ_Syn_melt[order(bPHYSEQ_Syn_melt$SynCom9),]
+bPHYSEQ_Syn_melt <- bPHYSEQ_Syn_melt[order(bPHYSEQ_Syn_melt$label_phyla),]
+#Reorder levels of the label for plot
+bPHYSEQ_Syn_melt$SynComStrain <- factor(bPHYSEQ_Syn_melt$SynComStrain, levels = c("Host","F242","F201", "F041","F042", "F247", "F112", "F125", "F233","F004", "unassigned"))
+bPHYSEQ_Syn_melt$type <- factor(bPHYSEQ_Syn_melt$type, levels = c("roots", "sorbix"))
+bPHYSEQ_Syn_melt$SynCom9 <- factor(bPHYSEQ_Syn_melt$SynCom9, levels = c("yes", "no"))
+bPHYSEQ_Syn_melt$treatment <- factor(bPHYSEQ_Syn_melt$treatment, levels = c("high P", "medium P", "low P"))
+
+```
+
+```{r plotting, echo=F, warning=F, message=F, fig.height=6, fig.width=10}
+
+bPHYSEQ_famgen_melt_sub <- droplevels(bPHYSEQ_famgen_melt[bPHYSEQ_famgen_melt$Abundance>0,])
+#plot
+xlabelsSub <- bPHYSEQ_famgen_melt_sub %>%
+  select(type, treatment,sample_name) %>% 
+  unique() %>% 
+  filter(type=="sorbix") %>% 
+  mutate(xlabs=paste(treatment, sample_name, sep="_")) %>% 
+  arrange(treatment) %>% 
+  pull(xlabs)
+
+xlabelsRoot <- bPHYSEQ_famgen_melt_sub %>%
+  select(type, treatment, SynCom9, sample_name) %>% 
+  unique() %>% 
+  filter(type=="roots" & SynCom9=="yes") %>% 
+  mutate(xlabs=paste(treatment, sample_name, sep="_")) %>% 
+  arrange(desc(treatment)) %>% 
+  pull(xlabs)
+
+
+fig4.1.1 <- bPHYSEQ_famgen_melt_sub %>% 
+  filter(type=="sorbix") %>% 
+  ggplot(aes(x=factor(sample_name), y=Abundance, fill=label)) + 
+  geom_bar(stat="identity")+
+  ylab("Relative abundance [%]") +
+  scale_colour_manual(values=TAX_level_cols_famgen)+
+  scale_fill_manual(values=TAX_level_cols_famgen) +
+  scale_x_discrete(labels= xlabelsSub) +
+  scale_y_continuous(limits = c(0,101))+
+  guides(fill=guide_legend(title="Family, Genus"))+
+  #geom_text(data=bPHYSEQ_famgen_melt, aes(label=sample_Support, y=-10), angle=90, check_overlap=T, size=3, hjust = 0.25) + 
+  theme_bw()+
+  ggtitle("Substrate: Genus Level")+
+  theme(axis.ticks.x=element_blank(), legend.position = "none", axis.text.x = element_text(angle=90, hjust=0), axis.title.x = element_blank())
+#fig4.1.1
+#ggsave("fig4.1.1.png", height=6, width = 10)
+
+fig4.1.2 <- bPHYSEQ_famgen_melt_sub %>% 
+  filter(type=="roots" & SynCom9=="yes") %>% 
+  ggplot(aes(x=factor(sample_name), y=Abundance, fill=label)) + 
+  geom_bar(stat="identity")+
+  ylab("Relative abundance [%]") +
+  scale_colour_manual(values=TAX_level_cols_famgen)+
+  scale_fill_manual(values=TAX_level_cols_famgen) +
+  scale_x_discrete(labels= xlabelsRoot) +
+  scale_y_continuous(limits = c(0,101))+
+  guides(fill=guide_legend(title="Family, Genus"))+
+  #geom_text(data=bPHYSEQ_famgen_melt, aes(label=sample_Support, y=-10), angle=90, check_overlap=T, size=3, hjust = 0.25) + 
+  theme_bw()+
+  ggtitle("Roots: Genus Level")+
+  theme(axis.ticks.x=element_blank(), legend.position = "none", axis.text.x = element_text(angle=90, hjust=0), axis.title.x = element_blank())
+#fig4.1.2
+#ggsave("fig4.1.2.png", height=6, width = 10)
+
+
+fig4.2.1 <- bPHYSEQ_Syn_melt %>% 
+  filter(type=="sorbix") %>% 
+  ggplot(aes(x=factor(sample_name), y=Abundance, fill=SynComStrain)) + 
+  geom_bar(stat="identity")+
+  ylab("Relative abundance [%]") +
+  scale_colour_manual(values=TAX_level_cols_SynCom)+
+  scale_fill_manual(values=TAX_level_cols_SynCom) +
+  scale_x_discrete(labels= xlabelsSub) +
+  guides(fill=guide_legend(title="SynCom"))+
+  #geom_text(data=bPHYSEQ_ASV_melt, aes(label=sample_Support, y=-10), angle=90, check_overlap=T, size=3, hjust = 0.25) + 
+  theme_bw()+
+  ggtitle("Substrate: SynCom Level")+
+  theme(axis.ticks.x=element_blank(), legend.position = "none", axis.text.x = element_text(angle=90, hjust=0), axis.title.x = element_blank())
+#fig4.2.1
+#ggsave("fig4.2.1.png", height=5, width = 6)
+
+
+
+fig4.2.2 <- bPHYSEQ_Syn_melt%>% 
+  filter(type=="roots"& SynCom9=="yes") %>% 
+  ggplot(aes(x=factor(sample_name), y=Abundance, fill=SynComStrain)) + 
+  geom_bar(stat="identity")+
+  ylab("Relative abundance [%]") +
+  scale_colour_manual(values=TAX_level_cols_SynCom)+
+  scale_fill_manual(values=TAX_level_cols_SynCom) +
+  scale_x_discrete(labels= xlabelsRoot) +
+  guides(fill=guide_legend(title="SynCom"))+
+  #geom_text(data=bPHYSEQ_ASV_melt, aes(label=sample_Support, y=-10), angle=90, check_overlap=T, size=3, hjust = 0.25) + 
+  theme_bw()+
+  ggtitle("Roots: SynCom Level")+
+  theme(axis.ticks.x=element_blank(), legend.position = "none", axis.text.x = element_text(angle=90, hjust=0), axis.title.x = element_blank())
+
+#fig4.2.2
+#ggsave("fig4.2.2.png", height=5, width = 6)
+
+
+#png("figures/fig3.1.png",10000,4500, res=600)
+
+fig4.1 <- plot_grid(fig4.1.1 + labs(colour=""),
+               fig4.1.2  + labs(colour=""),
+               labels=c("A","B"),
+               align = "hv",
+               rel_heights = c(5,5),
+               nrow=1)
+legend <- get_legend(fig4.1.1 + theme(legend.position="bottom") + labs(fill="label")+theme(legend.title = ))
+fig4.1 <- plot_grid(fig4.1, legend, nrow=2, rel_heights=c(1, .1))
+
+print(fig4.1)
+#ggsave("fig4.1.png", height=10, width = 15)
+
+fig4.2 <- plot_grid(fig4.2.1 + labs(colour=""),
+               fig4.2.2  + labs(colour=""),
+               labels=c("A","B"),
+               align = "hv",
+               rel_heights = c(5,5),
+               nrow=1)
+legend <- get_legend(fig4.2.1 + theme(legend.position="bottom") + labs(fill="label")+theme(legend.title = ))
+fig4.2 <- plot_grid(fig4.2, legend, nrow=2, rel_heights=c(1, .1))
+
+print(fig4.2)
+#ggsave("fig4.2.png", height=6, width = 10)
+
+#dev.off()
+
+```
+\vspace{5mm}
+
+**Conclusion:** *Pseudomonas* F112 strain was dominating the sorbix and hence also the roots samples. *Pseudomonas* is also the most abundant genus on roots and sorbix. However other strains like *Pseudomonas* F247, *Ensifer* F201 appear in relatively large proportions. *Rhodanobacter* F125, *Domibacillus* F004 and *Nocardioides* appear only in low anundances. *Nocardioides* F233, *Labrys* F242, *Variovorax* F042 seem not to be present. *Cupriavidus* was contaminated by *Pseudomonas* F247 and therefore all reads that were supposed to be Cupriavidus turned out to be *Pseudomonas* F112. 
+
+\pagebreak
+
+## Microbial load on roots
+
+We correct the microbial load by the host abundance to get microbial sequences per plant sequence. We use the following formula:
+
+$abu_{genusCorrected}=\frac{abu_{genus}}{abu_{host}}$
+
+### Figure 6.1 | Microbial load overview
+
+```{r bac genus correct bacterial load, echo=F, warning=F, message=F}
+
+
+bPHYSEQ_famgen_melt$Abundance_corrected <- NA
+bPHYSEQ_Syn_melt$Abundance_corrected <- NA
+
+for (sample in unique(bPHYSEQ_famgen_melt$sample_name)) {
+  #get sample abundances
+  host_abu <- bPHYSEQ_famgen_melt$Abundance[bPHYSEQ_famgen_melt$sample_name==sample & bPHYSEQ_famgen_melt$label=="Host"]
+  microbes_abu <- bPHYSEQ_famgen_melt[bPHYSEQ_famgen_melt$sample_name==sample & bPHYSEQ_famgen_melt$label!="Host", colnames(bPHYSEQ_famgen_melt)%in%c("Abundance", "label")]
+  {host_abu <- host_abu
+    total <- host_abu / sum(c(host_abu, microbes_abu$Abundance)) #????!
+    host_abu <- host_abu / total *100
+    microbes_abu$Abundance <- microbes_abu$Abundance / total*100
+  }
+  
+  #correct sample abundances
+  microbes_abu$Abundance_corrected <- (microbes_abu$Abundance / host_abu)
+  
+  #add corrected sample abundances
+  bPHYSEQ_famgen_melt$Abundance_corrected[bPHYSEQ_famgen_melt$sample_name==sample & bPHYSEQ_famgen_melt$label=="Host"] <- 1
+  bPHYSEQ_famgen_melt$Abundance_corrected[bPHYSEQ_famgen_melt$sample_name==sample & bPHYSEQ_famgen_melt$label!="Host"] <- microbes_abu$Abundance_corrected
+
+}
+
+
+# SynCom
+
+for (sample in unique(bPHYSEQ_Syn_melt$sample_name)) {
+  #get sample abundances
+  host_abu <- bPHYSEQ_Syn_melt$Abundance[bPHYSEQ_Syn_melt$sample_name==sample & bPHYSEQ_Syn_melt$label=="Host"]
+  microbes_abu <- bPHYSEQ_Syn_melt[bPHYSEQ_Syn_melt$sample_name==sample & bPHYSEQ_Syn_melt$label!="Host", colnames(bPHYSEQ_Syn_melt)%in%c("Abundance", "label")]
+  {host_abu <- host_abu
+    total <- host_abu / sum(c(host_abu, microbes_abu$Abundance))
+    host_abu <- host_abu / total *100
+    microbes_abu$Abundance <- microbes_abu$Abundance / total*100
+  }
+  
+  #correct sample abundances
+  microbes_abu$Abundance_corrected <- (microbes_abu$Abundance / host_abu)
+  
+  #add corrected sample abundances
+  bPHYSEQ_Syn_melt$Abundance_corrected[bPHYSEQ_Syn_melt$sample_name==sample & bPHYSEQ_Syn_melt$label=="Host"] <- 1
+  bPHYSEQ_Syn_melt$Abundance_corrected[bPHYSEQ_Syn_melt$sample_name==sample & bPHYSEQ_Syn_melt$label!="Host"] <- microbes_abu$Abundance_corrected
+
+}
+
+
+
+
+```
+
+```{r fig corrected abundances, echo=F, warning=F, message=F, fig.height=5, fig.width=8}
+# plot famgen
+df <- droplevels(bPHYSEQ_famgen_melt[bPHYSEQ_famgen_melt$label!= "Host",])
+TAX_level_cols_famgen2 <- TAX_level_cols_famgen[names(TAX_level_cols_famgen) !="Host"]
+# normalisieren ohne Host? 
+
+#plot
+fig5.1 <- df %>% 
+  filter(type=="roots"& SynCom9=="yes") %>% 
+  ggplot(aes_string(x="Sample", y="Abundance_corrected", fill="label")) + 
+  geom_bar(stat="identity")+
+  xlab("") + 
+  ylab("Bacteria Sequences / Plant Sequence") +
+  scale_colour_manual(values=TAX_level_cols_famgen2)+
+  scale_fill_manual(values=TAX_level_cols_famgen2) +
+  scale_x_discrete(labels= xlabelsRoot) +
+  guides(fill=guide_legend(title="Genus"))+ 
+  theme_bw()+
+  ggtitle("Roots: Genus Level")+
+  theme(axis.ticks.x=element_blank(), legend.position = "right", axis.text.x = element_text(angle=90, hjust=0))
+fig5.1
+#ggsave("fig5.1.png", height=5, width = 8)
+
+
+# plot SynCom
+df <- droplevels(bPHYSEQ_Syn_melt[bPHYSEQ_Syn_melt$label!= "Host",])
+TAX_level_cols_SynCom2 <- TAX_level_cols_SynCom[names(TAX_level_cols_SynCom) !="Host"]
+df$SynComStrain <- factor(df$SynComStrain, levels = c("F242","F201", "F041","F042", "F247", "F112", "F125", "F233","F004", "unassigned"))
+
+#plot
+fig5.2 <- df %>% 
+   filter(type=="roots"& SynCom9=="yes")%>% 
+  ggplot(aes_string(x="Sample", y="Abundance_corrected", fill="SynComStrain")) + 
+  geom_bar(stat="identity")+
+  xlab("") + 
+  ylab("Bacteria Sequences / Plant Sequence") +
+  scale_colour_manual(values=TAX_level_cols_SynCom2)+
+  scale_fill_manual(values=TAX_level_cols_SynCom2) +
+  scale_x_discrete(labels= xlabelsRoot) +
+  guides(fill=guide_legend(title="SynCom"))+ 
+  theme_bw()+
+  ggtitle("Roots: SynCom Level")+
+  theme(axis.ticks.x=element_blank(),  legend.position = "right",axis.text.x = element_text(angle=90, hjust=0))
+fig5.2
+#ggsave("fig5.2.png", height=5, width = 8)
+
+fig5 <- plot_grid(fig5.1 + labs(colour=""),
+               fig5.2  + labs(colour=""),
+               labels=c("A","B"),
+               align = "hv",
+               rel_heights = c(5,5),
+               nrow=1)
+
+#fig5
+#ggsave("fig5.png", height=8, width=20)
+
+```
+\vspace{5mm}
+
+**Conclusion** We assumed that there is an accumulation of bacterial strains in a P-limited environment.The abundance of the strain seem to vary quite a lot and there is no clear pattern between the treatments. 
+
+\vspace{5mm}
+
+### Figure 6 | Microbial load per SynCom strain
+
+```{r fig corrected sample abundances, echo=F, warning=F, message=F, fig.height=8, fig.width=20}
+
+#plot
+xlabelsRootInoc <- df %>%
+  select(sample_name, type, treatment, SynCom9) %>% 
+  unique() %>% 
+     filter(type=="roots"& SynCom9=="yes")%>% 
+  mutate(xlabs=treatment) %>%  
+  arrange(desc(treatment)) %>% 
+  pull(xlabs)
+
+fig6 <- df %>% 
+  filter(type=="roots"& SynCom9=="yes")%>% 
+  ggplot(aes_string(x="sample_name", y="Abundance_corrected", fill="SynComStrain")) + 
+  geom_bar(stat="identity")+
+  xlab("treatment") + 
+  ylab("Bacteria Sequences / Plant Sequence") +
+  scale_colour_manual(values=TAX_level_cols_SynCom2)+
+  scale_fill_manual(values=TAX_level_cols_SynCom2) +
+  scale_x_discrete(labels= xlabelsRootInoc) +
+  guides(fill=guide_legend(title="SynCom9"))+ 
+  theme_bw()+
+  ggtitle("Roots: SynCom Level")+
+  theme(axis.ticks.x=element_blank(), axis.text.x = element_text(angle=90,hjust=1)) +
+  facet_wrap(~SynComStrain, scales = "free")
+
+fig6
+#ggsave("fig6.png", height=8, width=20)
+
+
+```
+\vspace{5mm}
+
+**Conclusion** *Ensifer* F201, *Pseudomonas* F247 and F112 are highly abundant strains, whereas *Rhodanobacter* F125 and *Domibacillus* F004 are low abundant strains. The strains: *Variovorax* F042, *Nocardioides* F233 and *Labrys* F242 are lacking. 
+\vspace{5mm}
+
+### Asymptotic Kruskal-Wallis Test Abundance
+
+```{Kruksal-Wallis test, echo=F, warning=F, message=F}
+
+hist(df$Abundance_corrected)
+
+group <- as.factor(paste(df$treatment, df$SynComStrain,sep="_"))
+sample <- df$Abundance_corrected
+DAT_krusk <- kruskal.test(sample ~ group)  # library(coin)
+print("Kruskal-Wallis Test")
+DAT_krusk
+
+```
+
+
+\pagebreak
+
+### Figure 7 | Statistical Analysis: For each strain we plot the Abundance over treatment. We apply the Wicoxon-rank sum test in order to compare 2 non-parametic groups. 
+
+```{r SynCom -treatment  , echo=F, warning=F, message=F, fig.height=8, fig.width=8}
+
+library(ggpubr)
+my.comparison<-list(c("low P", "medium P"), c("medium P", "high P"),c("low P", "high P"))
+
+F201<- df %>%  
+  filter(type=="roots"& SynComStrain=="F201")%>% 
+  mutate(treatment = factor(treatment, levels = c("low P", "medium P", "high P"))) %>% 
+  ggplot(aes(x=treatment, y= Abundance_corrected, fill = treatment)) +
+  geom_boxplot(outlier.shape=NA,alpha=0.8,width = 0.4)+
+  geom_jitter(alpha=0.4, width = 0.3)+ 
+  guides(fill="none")+
+  ggtitle("F201 - Ensifer")+
+  xlab("Treatment") +
+  ylab("Relative abundance [%]") +
+  scale_fill_manual(values=c("darkgoldenrod1","cornflowerblue","aquamarine3")) +
+  scale_y_continuous(limits=c(0,3))+
+  stat_compare_means(comparisons=my.comparison,method="wilcox.test")+
+  theme_classic() +
+  labs(x = "Treatment",
+       y = "Bacterial load", 
+       title = "F201",
+       color = "Treatment")
+
+F247<- df %>%  
+  filter(type=="roots"& SynComStrain=="F247")%>% 
+  mutate(treatment = factor(treatment, levels = c("low P", "medium P", "high P"))) %>% 
+  ggplot(aes(x=treatment, y= Abundance_corrected, fill = treatment)) +
+  geom_boxplot(outlier.shape=NA,alpha=0.8,width = 0.4)+
+  geom_jitter(alpha=0.4, width = 0.3)+ 
+  guides(fill="none")+
+  ggtitle("F247 - Pseudomonas")+
+  xlab("Treatment") +
+  ylab("Relative abundance [%]") +
+  scale_fill_manual(values=c("darkgoldenrod1","cornflowerblue","aquamarine3")) +
+  scale_y_continuous(limits=c(0,1.4))+
+  stat_compare_means(comparisons=my.comparison,method="wilcox.test")+
+  theme_classic() +
+ # scale_color_manual()+
+  labs(x = "Treatment",
+       y = "Bacterial load", 
+       title = "F247",
+       color = "Treatment")
+
+
+
+  
+F112<- df %>%  
+  filter(type=="roots"& SynComStrain=="F112")%>% 
+  mutate(treatment = factor(treatment, levels = c("low P", "medium P", "high P"))) %>% 
+  ggplot(aes(x=treatment, y= Abundance_corrected, fill = treatment)) +
+  geom_boxplot(outlier.shape=NA,alpha=0.8,width = 0.4)+
+  geom_jitter(alpha=0.4, width = 0.3)+ 
+  guides(fill="none")+
+  ggtitle("F112 - Pseudomonas")+
+  xlab("Treatment") +
+  ylab("Relative abundance [%]") +
+  scale_fill_manual(values=c("darkgoldenrod1","cornflowerblue","aquamarine3")) +
+  scale_y_continuous(limits=c(0,3))+
+ # facet_wrap(~SynComStrain, scales = "free") +
+  stat_compare_means(comparisons=my.comparison,method="wilcox.test")+
+  theme_classic() +
+ # scale_color_manual()+
+  labs(x = "Treatment",
+       y = "Bacterial load", 
+       title = "F112",
+       color = "Treatment")
+
+
+F004<- df %>%  
+  filter(type=="roots"& SynComStrain=="F004")%>% 
+  mutate(treatment = factor(treatment, levels = c("low P", "medium P", "high P"))) %>% 
+  ggplot(aes(x=treatment, y= Abundance_corrected, fill = treatment)) +
+  geom_boxplot(outlier.shape=NA,alpha=0.8,width = 0.4)+
+  geom_jitter(alpha=0.4, width = 0.3)+ 
+  guides(fill="none")+
+  ggtitle("F004 - Domibacillus")+
+  xlab("Treatment") +
+  ylab("Relative abundance [%]") +
+  scale_fill_manual(values=c("darkgoldenrod1","cornflowerblue","aquamarine3")) +
+  scale_y_continuous(limits=c(0,0.25))+
+  #facet_wrap(~SynComStrain, scales = "free") +
+  stat_compare_means(comparisons=my.comparison,method="wilcox.test")+
+  theme_classic() +
+ # scale_color_manual()+
+  labs(x = "Treatment",
+       y = "Bacterial load", 
+       title = "F004",
+       color = "Treatment")
+
+
+F125<- df %>%  
+  filter(type=="roots"& SynComStrain=="F125")%>% 
+  mutate(treatment = factor(treatment, levels = c("low P", "medium P", "high P"))) %>% 
+  ggplot(aes(x=treatment, y= Abundance_corrected, fill = treatment)) +
+  geom_boxplot(outlier.shape=NA,alpha=0.8,width = 0.4)+
+  geom_jitter(alpha=0.4, width = 0.3)+ 
+  guides(fill="none")+
+  ggtitle("F125 - Rhodanobacter")+
+  xlab("Treatment") +
+  ylab("Relative abundance [%]") +
+  scale_fill_manual(values=c("darkgoldenrod1","cornflowerblue","aquamarine3")) +
+  scale_y_continuous(limits=c(0,0.8))+
+  #facet_wrap(~SynComStrain, scales = "free") +
+  stat_compare_means(comparisons=my.comparison,method="wilcox.test")+
+  theme_classic() +
+      labs(x = "Treatment",
+       y = "Bacterial load", 
+       title = "F125")
+
+  
+F042<- df %>%  
+  filter(type=="roots"& SynComStrain=="F042")%>% 
+  mutate(treatment = factor(treatment, levels = c("low P", "medium P", "high P"))) %>% 
+  ggplot(aes(x=treatment, y= Abundance_corrected, fill = treatment)) +
+  geom_boxplot(outlier.shape=NA,alpha=0.8,width = 0.4)+
+  geom_jitter(alpha=0.4, width = 0.3)+ 
+  guides(fill="none")+
+  ggtitle("F042 - Variovorax")+
+  xlab("Treatment") +
+  ylab("Relative abundance [%]") +
+  scale_fill_manual(values=c("darkgoldenrod1","cornflowerblue","aquamarine3")) +
+  #facet_wrap(~SynComStrain, scales = "free") +
+  stat_compare_means(comparisons=my.comparison,method="wilcox.test")+
+  theme_classic() +
+ # scale_color_manual()+
+  labs(x = "Treatment",
+       y = "Bacterial load", 
+       title = "F042",
+       color = "Treatment")
+
+
+F233<- df %>%  
+  filter(type=="roots"& SynComStrain=="F233")%>% 
+  mutate(treatment = factor(treatment, levels = c("low P", "medium P", "high P"))) %>% 
+  ggplot(aes(x=treatment, y= Abundance_corrected, fill = treatment)) +
+  geom_boxplot(outlier.shape=NA,alpha=0.8,width = 0.4)+
+  geom_jitter(alpha=0.4, width = 0.3)+ 
+  guides(fill="none")+
+  ggtitle("F233 - Nocardioides")+
+  xlab("Treatment") +
+  ylab("Relative abundance [%]") +
+  scale_fill_manual(values=c("darkgoldenrod1","cornflowerblue","aquamarine3")) +
+ # facet_wrap(~SynComStrain, scales = "free") +
+  stat_compare_means(comparisons=my.comparison,method="wilcox.test")+
+  theme_classic() +
+ # scale_color_manual()+
+  labs(x = "Treatment",
+       y = "Bacterial load", 
+       title = "F233",
+       color = "Treatment")
+
+
+
+
+fig7 <- plot_grid(F201 + labs(colour=""),
+                F247 + labs(colour=""),
+                F112 + labs(colour=""),
+                F004 + labs(colour=""),
+                F125 + labs(colour=""),
+                NULL,
+               labels=c("A","B","C","D","E"),
+               align = "hv",
+               rel_heights = c(1,1),
+               nrow=2, ncol=3, label_size = 11)
+fig7
+#ggsave("fig7.3.png", height=7, width=10)
+
+```
+**Conclusion** It seems that the different treatments don't influence the colonization of the roots by SynCom members. Except for *Domibacillus* F004 where we have significant difference between low P and high P treatment. 
+
+\vspace{5mm}
+
+### Figure 8 | Calculation of mean values 
+{r mean, echo=F, warning=F, message=F }
+#library(rstatix)
+# subset (only roots)
+roots_syn<- subset(bPHYSEQ_Syn_melt, type=="roots")
+
+#means
+
+mean<-aggregate(roots_syn$Abundance,by= list(roots_syn$SynComStrain, roots_syn$treatment), mean)
+
+sd<-aggregate(roots_syn$Abundance,by= list(roots_syn$SynComStrain, roots_syn$treatment), FUN=sd)
+
+n<-aggregate(roots_syn$Abundance,by= list(roots_syn$SynComStrain, roots_syn$treatment), FUN=length)
+
+
+tot<-cbind(mean, sd, n)
+total<- tot[,-c(4,5,7,8)]
+
+colnames(total)<- c("Syn", "treat", "mean_abundance", "sd_abundance", "n")
+
+se<-(total$sd/sqrt(total$n)	)						
+
+total2<- cbind(total, se)
+
+fig8 <- total2%>% 
+  group_by(treat)%>%
+  ggplot(aes(x=treat, y=mean_abundance,fill=Syn)) + 
+  geom_bar(stat="identity", position="stack")+
+  geom_errorbar(aes(ymin=abundance-2*se, ymax=abundance+2*se), width=.1, position = "identity")+
+  ylab("Relative abundance [%]") +
+ scale_fill_manual(values=TAX_level_cols_SynCom) +
+  guides(fill=guide_legend(title="SynCom"))+
+  theme_bw()+
+  ggtitle("Mean Abundance per Treatment")+
+  theme(axis.ticks.x=element_blank(), legend.position = "right", axis.text.x = element_text(), axis.title.x = element_blank())
+
+fig8
+#ggsave("fig8.1.png", height=6, width=4)
+
+
+
+```{r export RDA files, echo=F, warning=F, message=F}
+
+# Export
+# create directory
+#dir.create("../../Data/Sequencing/interim/02_Taxa_Analysis")
+
+## set output directory
+setwd("~/Desktop/MASTER Pflanzenwissenschaften/Experiments/Microbiota analysis/Results/Sequencing/interim/02_Taxa_Analysis")
+
+#save objects needed in the following scripts as RDA
+saveRDS(bPHYSEQ, "bPHYSEQ.RDS")
+saveRDS(bPHYSEQ_phyla_melt, "bPHYSEQ_phyla_melt.RDS")
+saveRDS(bPHYSEQ_famgen_melt, "bPHYSEQ_famgen_melt.RDS")
+saveRDS(bPHYSEQ_Syn_melt, "bPHYSEQ_Syn_melt.RDS")
+
+
+```
