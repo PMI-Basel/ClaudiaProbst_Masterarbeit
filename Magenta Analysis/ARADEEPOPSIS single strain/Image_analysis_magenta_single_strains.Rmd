@@ -1,0 +1,374 @@
+---
+title: "Image Analysis Magenta 2"
+author: "Claudia Probst"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: yes
+    toc_depth: '3'
+    df_print: paged
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+geometry: margin=2cm
+editor_options: 
+  chunk_output_type: console
+---
+# Experimental Setup
+
+We're investigating the responses of *Arabidopsis thaliana* to varying levels of P-fertilizer supply in presence or absence of single strains of the SynCom9. ARADEEPOPSIS is a software that can be used to study pheotypic traits of *Arabidopsis thaliana* by images. We can investigate biomass, shape and size by different features over time. 
+
+```{r setup, include=FALSE, echo=F, message=F, warning=F}
+##clear the objects from memory
+rm(list=ls())
+#knitr settings
+knitr::opts_chunk$set(echo=TRUE, fig.align="center")
+options(tinytex.verbose = TRUE)
+## installs (if necessary) and loads libraries
+library(ggplot2)
+library(cowplot)
+library(tibble)
+library(tidyr)
+library(ggsignif)
+library(datasets)
+library(multcompView)
+library(dplyr)
+
+#set seed
+set.seed(100)
+
+setwd("~/Desktop/MASTER Pflanzenwissenschaften/Experiments/Magenta assay/Magenta single_strain_all")
+data<-read.csv(file="aradeepopsis_traits.csv", header=TRUE, sep=",")
+str(data)
+head(data)  
+
+```
+
+Feautures of interest
+```{r foi, echo=F, message=F, warning=F}
+
+# select features of interest
+foi <- c("plant_region_red_channel","plant_region_green_channel", "plant_region_blue_channel", "plant_region_chroma_ratio", "plant_region_chroma_difference", "plant_region_chroma_base", "plant_region_green_strength","plant_region_blue_green_ratio", "plant_region_area", "plant_region_filled_area", "plant_region_convex_area","plant_region_equivalent_diameter", "plant_region_major_axis_length","plant_region_minor_axis_length", "plant_region_perimeter","plant_region_eccentricity", "plant_region_extent", "plant_region_solidity", "plant_region_aspect_ratio")
+data_foi <- subset.data.frame(data, select = c("file", "assay", "treatment", "date", "day", foi))
+
+rm(data)
+```
+
+```{r z_scores, echo=F, message=F, warning=F}
+#prepare df
+data_foi_norm <- data_foi
+data_foi_norm[,(ncol(data_foi_norm)-length(foi)+1):ncol(data_foi_norm)] <- NA
+
+#normalise by z-scores each feature for each time point
+assays <- unique(data_foi$assay)
+
+#loop
+for (e in assays) {
+  for (f in foi) {
+    x <- data_foi[data_foi$assay == e, colnames(data_foi) == f] #get values for experiment for foi
+    z <- (x-mean(x))/(sd(x)) #compute z_score
+    data_foi_norm[data_foi_norm$assay == e, colnames(data_foi_norm) == f] <- z #store it
+  }
+}
+
+rm(data_foi)
+```
+STATISTICAL ANALYSIS from the last time point:
+We are now looking only at the data from the 05.12.22 (day 21)
+
+```{r final dataset,echo=F, message=F, warning=F}
+all_data<-subset(data_foi_norm, day=="day 21")
+
+```
+
+
+```{r normal distribution last timepoint,echo=F, message=F, warning=F, fig.show="hide"}
+
+
+LPC<- subset(all_data, treatment=="lowP_control")
+LPS<- subset(all_data, treatment=="lowP_SynCom9")
+LPF247<- subset(all_data, treatment=="lowP_F247")
+LPF112<- subset(all_data, treatment=="lowP_F112")
+LPF125<- subset(all_data, treatment=="lowP_F125")
+LPF242<- subset(all_data, treatment=="lowP_F242")
+
+
+#low P control
+par(mfrow=c(3:2))
+hist(LPC$plant_region_area)
+qqplot<-scale(LPC$plant_region_area)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(LPC$plant_region_area)
+
+#low P SynCom9
+
+hist(LPS$plant_region_area)
+qqplot<-scale(LPS$plant_region_area)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(LPS$plant_region_area)
+
+#low P F247
+
+hist(LPF247$plant_region_area)
+qqplot<-scale(LPF247$plant_region_area)
+qqnorm(qqplot)
+qqline(qqplot)
+
+shapiro.test(LPF247$plant_region_area)
+
+#low P F112
+par(mfrow=c(3:2))
+hist(LPF112$plant_region_area)
+qqplot<-scale(LPF112$plant_region_area)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(LPF112$plant_region_area)
+
+#low P F125
+hist(LPF125$plant_region_area)
+qqplot<-scale(LPF125$plant_region_area)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(LPF125$plant_region_area)
+
+#low P F242
+hist(LPF242$plant_region_area)
+qqplot<-scale(LPF242$plant_region_area)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(LPF242$plant_region_area)
+
+
+
+HPC<- subset(all_data, treatment=="highP_control")
+HPS<- subset(all_data, treatment=="highP_SynCom9")
+HPF247<- subset(all_data, treatment=="highP_F247")
+HPF112<- subset(all_data, treatment=="highP_F112")
+HPF125<- subset(all_data, treatment=="highP_F125")
+HPF242<- subset(all_data, treatment=="highP_F242")
+
+
+#high P control
+par(mfrow=c(3:2))
+hist(HPC$plant_region_area)
+qqplot<-scale(HPC$plant_region_area)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(HPC$plant_region_area)
+
+#high P SynCom9
+hist(HPS$plant_region_area)
+qqplot<-scale(HPS$plant_region_area)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(HPS$plant_region_area)
+
+#high P F247
+hist(HPF247$plant_region_area)
+qqplot<-scale(HPF247$plant_region_area)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(HPF247$plant_region_area)
+
+#high P F112
+par(mfrow=c(3:2))
+hist(HPF112$plant_region_area)
+qqplot<-scale(HPF112$plant_region_area)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(HPF112$plant_region_area)
+
+#high P F125
+hist(HPF125$plant_region_area)
+qqplot<-scale(HPF125$plant_region_area)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(HPF125$plant_region_area)
+
+#high P F242
+hist(HPF242$plant_region_area)
+qqplot<-scale(HPF242$plant_region_area)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(HPF242$plant_region_area)
+
+```
+
+```{r merging subsets, echo=F, message=F, warning=F }
+
+#merging all subsets to one dataframe
+
+sub1 <- subset.data.frame(LPC, select = c( "assay", "treatment", "date", "day", "plant_region_area"))
+sub2 <- subset.data.frame(LPS, select = c( "assay", "treatment", "date", "day", "plant_region_area"))
+sub3 <- subset.data.frame(LPF247, select = c( "assay", "treatment", "date", "day", "plant_region_area"))
+sub4 <- subset.data.frame(LPF112, select = c( "assay", "treatment", "date", "day", "plant_region_area"))
+sub5 <- subset.data.frame(LPF125, select = c( "assay", "treatment", "date", "day", "plant_region_area"))
+sub6 <- subset.data.frame(LPF242, select = c( "assay", "treatment", "date", "day", "plant_region_area"))
+
+sub7 <- subset.data.frame(HPC, select = c( "assay", "treatment", "date", "day", "plant_region_area"))
+sub8 <- subset.data.frame(HPS, select = c( "assay", "treatment", "date", "day", "plant_region_area"))
+sub9 <- subset.data.frame(HPF247, select = c( "assay", "treatment", "date", "day", "plant_region_area"))
+sub10 <- subset.data.frame(HPF112, select = c( "assay", "treatment", "date", "day", "plant_region_area"))
+sub11 <- subset.data.frame(HPF125, select = c( "assay", "treatment", "date", "day", "plant_region_area"))
+sub12 <- subset.data.frame(HPF242, select = c( "assay", "treatment", "date", "day", "plant_region_area"))
+
+
+
+data_1 <- rbind(sub1, sub2)
+data_2 <- rbind(data_1, sub3)
+data_3 <- rbind(data_2, sub4)
+data_4 <- rbind(data_3, sub5)
+data_lowP <- rbind(data_4, sub6)
+
+data_6 <- rbind(sub7, sub8)
+data_7 <- rbind(data_6, sub9)
+data_8 <- rbind(data_7, sub10)
+data_9 <- rbind(data_8, sub11)
+data_highP <- rbind(data_9, sub12)
+
+
+
+rm(LPC)
+rm(LPS)
+rm(LPF247)
+rm(LPF112)
+rm(LPF125)
+rm(LPF242)
+rm(HPC)
+rm(HPS)
+rm(HPF247)
+rm(HPF112)
+rm(HPF125)
+rm(HPF242)
+
+rm(data_1)
+rm(data_2)
+rm(data_3)
+rm(data_4)
+rm(data_6)
+rm(data_7)
+rm(data_8)
+rm(data_9)
+
+
+```
+
+```{r means, echo=F, message=F, warning=F }
+#calculating mean values
+means_sub1<- tapply(X=sub1$plant_region_area, INDEX=sub1$treatment, FUN=mean,na.rm=TRUE)#LPC
+means_sub2<- tapply(X=sub2$plant_region_area, INDEX=sub2$treatment, FUN=mean,na.rm=TRUE)#LPS
+means_sub3<- tapply(X=sub3$plant_region_area, INDEX=sub3$treatment, FUN=mean,na.rm=TRUE) #LPF247
+means_sub4<- tapply(X=sub4$plant_region_area, INDEX=sub4$treatment, FUN=mean,na.rm=TRUE) #LPF112
+means_sub5<- tapply(X=sub5$plant_region_area, INDEX=sub5$treatment, FUN=mean,na.rm=TRUE) #LPF125
+means_sub6<- tapply(X=sub6$plant_region_area, INDEX=sub6$treatment, FUN=mean,na.rm=TRUE) #LPF242
+
+
+rm(sub1)
+rm(sub2)
+rm(sub3)
+rm(sub4)
+rm(sub5)
+rm(sub6)
+rm(sub7)
+rm(sub8)
+rm(sub9)
+rm(sub10)
+rm(sub11)
+rm(sub12)
+```
+
+ANOVA + Tukey's HSD
+```{r anova last timepoint, echo=F, message=F, warning=F }
+lowP<-aov(plant_region_area~treatment, data=data_lowP )
+summary(lowP)
+
+tukey_lowP<- TukeyHSD(lowP)
+tukey_lowP
+
+
+```
+combine ANOVA + Tukey's HSD with compact letters
+```{r,compact letter,echo=F, message=F, warning=F}
+
+#plant_region_area
+anova_plant_region_area<- aov(plant_region_area~treatment, data=data_lowP)
+tukey_plant_region_area<-TukeyHSD(anova_plant_region_area)
+cld1<- multcompLetters4(anova_plant_region_area, tukey_plant_region_area)
+print(cld1)
+
+Tk1<-group_by(data_lowP, treatment) %>%
+  summarise(mean=mean(plant_region_area,na.rm=TRUE), quant=quantile(plant_region_area, probs=0.75, na.rm=TRUE)) %>%
+  arrange(desc(mean))
+
+cld1<- as.data.frame.list(cld1$treatment)
+Tk1$cld1<-cld1$Letters
+print(Tk1)
+
+#plant_region_area
+anova_plant_region_area<- aov(plant_region_area~treatment, data=data_highP)
+tukey_plant_region_area<-TukeyHSD(anova_plant_region_area)
+cld2<- multcompLetters4(anova_plant_region_area, tukey_plant_region_area)
+print(cld2)
+
+Tk2<-group_by(data_highP, treatment) %>%
+  summarise(mean=mean(plant_region_area,na.rm=TRUE), quant=quantile(plant_region_area, probs=0.75, na.rm=TRUE)) %>%
+  arrange(desc(mean))
+
+cld2<- as.data.frame.list(cld1$treatment)
+Tk2$cld2<-cld1$Letters
+print(Tk2)
+
+
+```
+
+plotting
+```{r,plot1,echo=F, message=F, warning=F}
+#plant_region_area 
+fig1<-data_lowP %>%
+  ggplot(aes(x=treatment, y=plant_region_area, fill=treatment))+
+  geom_boxplot(outlier.shape = NA,alpha=0.8,width = 0.4)+
+  geom_jitter(width = 0.3, alpha=0.6)+
+  theme_classic()+
+  guides(fill=FALSE)+
+  geom_text(data=Tk1, aes(label=cld1,x=treatment, y=quant),vjust=-5.7,hjust=-0.5, size=4)+
+  scale_fill_manual(values = c("#cdc5c2", "#6699cc","#1974d2" ,"#17806d","#1a4876","#B2B2B2"))+
+  scale_x_discrete("Treatment", labels=c("LP C", " LP F112", "LP F125", "LP F242","LP F247","LP Syn9"))+
+    labs(x= "Treatment",
+       y= "Rosette area (z-transformed)",
+       title= "Rosette area under low P conditions")+
+  scale_y_continuous(limits=c(0,4))+
+  theme(legend.position = "none")+
+  theme(axis.title.x=element_blank())+
+  theme(axis.title.y = element_text(size=12))+
+  theme(text=element_text(size=12, colour="black"))
+fig1
+ggsave("boxplot_plant_region_area_LOWP.png", width=6, height=5) 
+
+```
+
+
+```{r,plot2,echo=F, message=F, warning=F}
+#plant_region_area 
+fig2<-data_highP %>%
+  ggplot(aes(x=treatment, y=plant_region_area, fill=treatment))+
+  geom_boxplot(outlier.shape = NA,alpha=0.8,width = 0.4)+
+  geom_jitter(width = 0.3, alpha=0.6)+
+  theme_classic()+
+  guides(fill=FALSE)+
+  geom_text(data=Tk2, aes(label=cld2,x=treatment, y=quant),vjust=-4.2,hjust=-0.5, size=4)+
+  scale_fill_manual(values = c("#cdc5c2", "#6699cc","#1974d2" ,"#17806d","#1a4876","#B2B2B2"))+
+  scale_x_discrete("Treatment", labels=c("HP C", " HP F112", "HP F125", "HP F242","HP F247","HP Syn9"))+
+    labs(x= "Treatment",
+       y= "Rosette area (z-transformed)",
+       title= "Rosette area under high P conditions")+
+  scale_y_continuous(limits=c(0,5))+
+  theme(legend.position = "none")+
+  theme(axis.title.x=element_blank())+
+  theme(axis.title.y = element_text(size=12))+
+  theme(text=element_text(size=12, colour="black"))
+fig2
+ggsave("boxplot_plant_region_area_HIGHP.png", width=6, height=5) 
+
+```

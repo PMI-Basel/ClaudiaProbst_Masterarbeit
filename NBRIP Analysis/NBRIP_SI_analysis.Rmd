@@ -1,0 +1,412 @@
+---
+title: "NBRIP SI analysis"
+author: "Claudia Probst"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+  html_document:
+    toc: yes
+    toc_depth: '3'
+    df_print: paged
+geometry: margin=2cm
+editor_options: 
+  chunk_output_type: console
+---
+\pagebreak
+
+# Experimental Setup
+
+Different phosphate sources were used to compare the capacity of the individual strains to solubilize inorganic phosphate. National Botanical Research Institute’s phosphate growth medium (NBRIP) supplemented with bromophenol  blue (NBRIP-BPB) served as basis medium (5 g L-1 MgCl2 x 6H2O, 0.25 g L-1 MgSO4 x H2O, 0.2 g L-1 KCl, 0.1 g L-1 (NH4)2SO4, 10 g L-1 D(+)-glucose , ± 0.025 g L-1 bromophenol blue (BPB), 12 g L-1 agar, pH 7.0) (Nautiyal, 1999, Gupta et al., 1994). Beside tricalcium phosphate (5 g L-1 Ca3(PO4)2), dipotassium phosphate (K2HPO4) with 1mM or 10mM concentrations served as phosphate sources. Furthermore, we investigated the growth of bacteria in absence of phosphorous (no P). 5 x 10 µl of inoculum were spotted on each plate and incubated in the dark for 2-9 days. The quantification was done with the solubilization index (SI) according to Edi-Premono (Edi-Premono et al., 1996): SI=(colony diameter+halo zone diameter)/(colony diameter). Strains forming a clear halo zone around the colony were identified as P-solubilizer. The experiment was conducted in triplicates. 
+
+\vspace{5mm}
+
+Treatments:
+
+- TSB: control for bacterial growth
+- Ca3(PO4)2
+- 1mM K2HPO4: control for halo formation
+- 10mM K2HPO4
+- no phosphate: control for halo formation
+\vspace{5mm}
+
+```{r setup, include=FALSE, echo=F, message=F, warning=F}
+
+
+library(ggplot2)
+library(cowplot)
+library(tibble)
+library(tidyr)
+library(ggsignif)
+library(dplyr)
+library(car)
+library(RColorBrewer)
+library(multcompView)
+library(datasets)
+library(grid)
+library(gridExtra)
+library(broman)
+library(dunn.test)
+
+ 
+##clear the objects from memory
+rm(list=ls())
+
+#knitr settings
+knitr::opts_chunk$set(echo=TRUE, fig.align="center")
+options(tinytex.verbose = TRUE)
+
+#set seed
+set.seed(100)
+
+# installs (if necessary) and loads libraries
+library("readxl")
+
+#import
+setwd("~/Desktop/MASTER Pflanzenwissenschaften/Experiments/NBRIP assay")
+NBRIP_Ca<- read_excel("NBRIP_data_all.xlsx", sheet = 1)
+NBRIP_10mM<- read_excel("NBRIP_data_all.xlsx", sheet = 2)
+
+
+```
+
+
+```{r foi, echo=F, message=F, warning=F}
+
+# select features of interest
+ca<- subset.data.frame(NBRIP_Ca, select = c( "strain","SI_diameter", "SI_area", "assay"))
+k2<- subset.data.frame(NBRIP_10mM, select = c( "strain","SI_diameter", "SI_area","assay"))
+
+#ca_solubilizer<- subset(ca, strain %in% c("F247", "F112","F242","control"))
+#k2_solubilizer<-subset(k2, strain %in% c("F247", "F112", "F242", "F201","F004","control"))
+```
+
+
+```{r mean, include=FALSE, echo=F, message=F, warning=F}
+#calculation of mean Ca3(PO4)2
+ca_means_SI_diameter<- tapply(X=ca$SI_diameter, INDEX=ca$strain, FUN=mean, na.rm=TRUE)
+ca_means_SI_diameter
+
+#calculation of mean 10mM K2HPO4
+
+k2_means_SI_diameter<- tapply(X=k2$SI_diameter, INDEX=k2$strain, FUN=mean, na.rm=TRUE)
+k2_means_SI_diameter
+
+```
+
+```{r PSB, include=FALSE, echo=F, message=F, warning=F}
+
+#create a new variable PSB Ca3(PO4)2
+
+ca$PSB<-factor(NA, levels =c("effective PSB","weak PSB", "no PSB"))
+ca$PSB[ca$SI_diameter >= 1.5] <- "effective PSB"
+ca$PSB[ca$SI_diameter> 1 & ca$SI_diameter < 1.5] <- "weak PSB"
+ca$PSB[ca$SI_diameter ==1] <- "no PSB"
+
+#create a new variable PSB K2HPO4
+
+k2$PSB<-factor(NA, levels =c("effective PSB","weak PSB", "no PSB"))
+k2$PSB[k2$SI_diameter >= 1.5] <- "effective PSB"
+k2$PSB[k2$SI_diameter> 1 & k2$SI_diameter < 1.5] <- "weak PSB"
+k2$PSB[k2$SI_diameter ==1] <- "no PSB"
+```
+
+```{r dataframe, include=FALSE, echo=F, message=F, warning=F}
+
+#create new dataframe with mean values and PSB Ca3(PO4)2
+
+df_ca<- data.frame(ca_means_SI_diameter)
+df_ca$PSB<-factor(NA, levels =c("effective PSB","weak PSB", "no PSB"))
+df_ca$PSB[df_ca$ca_means_SI_diameter >= 1.5] <- "effective PSB"
+df_ca$PSB[df_ca$ca_means_SI_diameter> 1 & df_ca$ca_means_SI_diameter < 1.5] <- "weak PSB"
+df_ca$PSB[df_ca$ca_means_SI_diameter ==1] <- "no PSB"
+df_ca
+
+#create new dataframe with mean values and PSB 10mM K2HPO4
+
+df_k2<- data.frame(k2_means_SI_diameter)
+df_k2$PSB<-factor(NA, levels =c("effective PSB","weak PSB", "no PSB"))
+df_k2$PSB[df_k2$k2_means_SI_diameter >= 1.5] <- "effective PSB"
+df_k2$PSB[df_k2$k2_means_SI_diameter> 1 & df_k2$k2_means_SI_diameter < 1.5] <- "weak PSB"
+df_k2$PSB[df_k2$k2_means_SI_diameter ==1] <- "no PSB"
+df_k2
+```
+
+# Statistical Analysis
+
+### Normal distribtion \| NBRIP Ca3(PO4)2
+
+Checking for normal distribution of the residuals
+
+* SI diameter
+* SI area
+
+\vspace{5mm}
+
+```{r CA normal distribuion +Anova, echo=F, message=F, warning=F}
+#SI diameter normal distribution
+par(mfrow=c(1:2))
+hist(ca$SI_diameter, xlab="SI diameter", ylab="frequency", main="Histogram")
+hist(rank(ca$SI_diameter), xlab="SI diameter", ylab="frequency", main="Histogram")
+qqplot<-scale(ca$SI_diameter)
+qqnorm(qqplot)
+qqline(qqplot)
+
+
+#SI area normal distribution
+par(mfrow=c(1:2))
+hist(ca$SI_area, xlab="SI area", ylab="frequency", main="Histogram")
+hist(rank(ca$SI_area), xlab="SI area", ylab="frequency", main="Histogram")
+qqplot<-scale(ca$SI_area)
+qqnorm(qqplot)
+qqline(qqplot)
+
+```
+\vspace{5mm}
+**Conclusion:** Samples are not normal distributed. Therfore we apply a Kruksal Wallis test. 
+\vspace{5mm}
+
+### Kruksal Wallis test \| NBRIP Ca3(PO4)2
+```{r,kruksal wallis CA,echo=F, message=F, warning=F}
+
+KW1<-as.factor(paste(ca$strain, ca$assay,sep="_"))
+sample<-ca$SI_diameter
+Kruk1<-kruskal.test(sample~KW1)
+Kruk1
+
+
+KW2<-as.factor(paste(k2$strain, k2$assay,sep="_"))
+sample<-k2$SI_diameter
+Kruk2<-kruskal.test(sample~KW2)
+Kruk2
+
+```
+\vspace{5mm}
+**Conclusion:** In both media we see a significant difference between the strains. 
+\vspace{5mm}
+
+### Dunn-Sidak test \| NBRIP Ca3(PO4)2
+```{r,dunn.test CA,echo=F, message=F, warning=F, results=F, list=TRUE}
+library(dunn.test)
+library(rstatix)
+
+dt1<-dunn.test(ca$SI_diameter,ca$strain,method="bonferroni", kw=TRUE, wrap=TRUE)
+stat.test1<-dunn_test(SI_diameter~strain, data=ca)
+
+dt2<-dunn.test(ca$SI_area, ca$strain, method="bonferroni", kw=TRUE, wrap=TRUE)
+stat.test2<-dunn_test(SI_area~strain, data=ca)
+
+dt3<-dunn.test(k2$SI_diameter, k2$strain, method="bonferroni", kw=TRUE, wrap=TRUE)
+stat.test3<-dunn_test(SI_diameter~strain, data=k2)
+
+dt4<-dunn.test(k2$SI_area, k2$strain, method="bonferroni", kw=TRUE, wrap=TRUE)
+stat.test4<-dunn_test(SI_area~strain, data=k2)
+
+
+```
+\vspace{5mm}
+**Conclusion:** By comparing all the groups against each other, groups which differ from each other are considered as P-solubilizer. 
+\vspace{5mm}
+
+### Figure 1\| Ca3(PO4)2 solubilization by SynCom9 members
+\vspace{5mm}
+```{r, ggplot1,echo=F, message=F, warning=F}
+library(ggpubr)
+library(multcompView)
+library(rcompanion)
+
+letters <- cldList(P.adjusted ~ comparisons, data=dt1, threshold=0.05)
+letters$Group <- gsub("^F4$", "F004", letters$Group)
+letters$Group <- gsub("^F41$", "F041", letters$Group)
+letters$Group <- gsub("^F42$", "F042", letters$Group)
+letters$Group <- gsub("^F21$", "F201", letters$Group)
+
+ca$letter <- NA
+for (s in unique(ca$strain)) {ca$letter[ca$strain==s] <- letters$Letter[letters$Group==s]}
+
+
+plot1<- ca %>%
+  ggplot(aes(x=strain, y=SI_diameter, fill=strain))+
+  #geom_text(aes(label=letter, y=0.8),check_overlap=TRUE)+
+  geom_boxplot(outlier.shape = NA,alpha=0.8,width = 0.6)+
+  geom_jitter(aes(shape=assay), width = 0.3, alpha=0.7)+
+  theme_classic()+
+  guides(fill=FALSE)+
+  scale_fill_manual(values = c("#cdc5c2","#BF84D3","#fce883","#ffcf48", "#6699cc","#1974d2" ,"#324ab2", "#3bb08f","#17806d","#1a4876" ))+
+  labs(x= "Strains",
+       y= "SI diameter")+
+  theme(text = element_text(size=12))+
+  theme(axis.text.x = element_text(size = 11))+
+  theme(axis.text.y = element_text(size = 11))+
+  theme(legend.position = "none")+
+  #stat_compare_means(method="kruskal.test", label.x=1, label.y=4)+
+  annotate("text", x=1, y=1.2, label="a")+
+  annotate("text", x=2, y=1.2, label="a")+
+  annotate("text", x=3, y=1.2, label="a")+
+  annotate("text", x=4, y=1.2, label="a")+
+  annotate("text", x=5.2, y=2.2, label="b")+
+  annotate("text", x=6, y=1.2, label="a")+
+  annotate("text", x=7, y=1.2, label="a")+
+  annotate("text", x=8, y=1.2, label="a")+
+  annotate("text", x=9.2, y=2.8, label="b")+
+  annotate("text", x=10.2, y=2.15, label="b")+
+  ggtitle("Solubilization of tricalcium phosphate by SynCom9 members")+
+  theme(axis.title.x=element_blank())+
+  theme(axis.title.y = element_text(size=10))+
+  theme(text=element_text(size=12, colour="black"))
+
+
+```
+
+```{r, ggplot2,echo=F, message=F, warning=F, fig.height=8, fig.width=10}
+
+
+plot2<-ggplot(ca,aes(x=strain, y=SI_area, fill=strain))+
+ # geom_text(aes(label=letter, y=0.6),check_overlap=TRUE)+
+  geom_boxplot(outlier.shape = NA,alpha=0.6,width = 0.6)+
+  geom_jitter(aes(shape=assay), width = 0.3, alpha=0.7)+
+  theme_classic()+
+  guides(fill=FALSE)+
+  scale_fill_manual(values = c("#cdc5c2","#BF84D3","#fce883","#ffcf48", "#6699cc","#1974d2" ,"#324ab2", "#3bb08f","#17806d","#1a4876" ))+
+  labs(x= "Strains",
+       y= "SI area")+
+  theme(text = element_text(size=12))+
+  theme(axis.text.x = element_text(size =11))+
+  theme(axis.text.y = element_text(size =11))+
+  theme(legend.position = "bottom")+
+  stat_compare_means(method="kruskal.test", label.x=1, label.y=16)+
+  annotate("text", x=5, y=5, label="****")+
+  annotate("text", x=9, y=16, label="****")+
+  annotate("text", x=10, y=16, label="****")+
+  ggtitle("Solubilization of tricalcium phosphate by SynCom9 members")+
+  theme(axis.title.x=element_blank())+
+  theme(axis.title.y = element_text(size=10))+
+  theme(text=element_text(size=12, colour="black"))
+
+
+fig1 <- plot_grid(plot1, plot2, labels=c("A","B"), ncol=1)
+title<- ggdraw()+draw_label("Solubilization of Tricalcium phosphate by SynCom9 members", fontface = "bold")
+plot_grid(title,fig1, ncol=1,rel_heights = c(0.1,1))
+
+ggsave("fig1.png", height=8, width = 10)
+
+
+```
+
+\vspace{5mm}
+**Conclusion:** F112 (Pseudomonas), F242 (Labrys), F247 (Pseudomonas) were able to form a halo around the colony and thus identified as P-solubilizer. The higher the SI value, the more calcium phosphate was solubilized. Values around 1 indicate strains that were not able to solubilize phosphorous.Different symbols indicate replicates.
+\vspace{5mm}
+
+
+### Normal distribtion \| NBRIP 10mM K2HPO4
+
+Checking for normal distribution of the residuals
+*SI diameter*
+*SI area*
+
+\vspace{5mm}
+
+```{r K2 normal distribuion , echo=F, message=F, warning=F}
+#SI diameter normal distribution
+par(mfrow=c(1:2))
+diameter<- aov(k2$SI_diameter~k2$strain*k2$assay)
+hist(rstandard(diameter))
+plot(diameter,2)
+
+#SI area normal distribution
+par(mfrow=c(1:2))
+area<- aov(k2$SI_area~k2$strain*k2$assay)
+hist(rstandard(area))
+plot(area,2)
+
+
+```
+
+\vspace{5mm}
+**Conclusion:** Samples are not normal distributed.
+\vspace{5mm}
+
+\vspace{5mm}
+### Figure 2\| K2HPO4 solubilization by SynCom9 members
+```{r, ggplot3,echo=F, message=F, warning=F}
+letters <- cldList(P.adjusted ~ comparisons, data=dt3, threshold=0.05)
+letters$Group <- gsub("^F4$", "F004", letters$Group)
+letters$Group <- gsub("^F41$", "F041", letters$Group)
+letters$Group <- gsub("^F42$", "F042", letters$Group)
+letters$Group <- gsub("^F21$", "F201", letters$Group)
+
+k2$letter <- NA
+for (s in unique(k2$strain)) {k2$letter[k2$strain==s] <- letters$Letter[letters$Group==s]}
+
+
+plot3<-ggplot(k2,aes(x=strain, y=SI_diameter, fill=strain))+
+#  geom_text(aes(label=letter, y=0.8),check_overlap=TRUE)+
+  geom_boxplot(outlier.shape = NA,alpha=0.8,width = 0.6)+
+  geom_jitter(aes(shape=assay), width = 0.3, alpha=0.7)+
+  theme_classic()+
+  guides(fill=FALSE)+
+  scale_fill_manual(values = c("#cdc5c2","#BF84D3","#fce883","#ffcf48", "#6699cc","#1974d2" ,"#324ab2", "#3bb08f","#17806d","#1a4876" ))+
+  labs(x= "Strains",
+       y= "SI diameter")+
+  theme(text = element_text(size=12))+
+  theme(axis.text.x = element_text(size = 11))+
+  theme(axis.text.y = element_text(size = 11))+
+  theme(legend.position = "none")+
+  #stat_compare_means(method="kruskal.test", label.x=1, label.y=5)+
+  annotate("text", x=1, y=1.2, label="a")+
+  annotate("text", x=2.2, y=2.1, label="b")+
+  annotate("text", x=3, y=1.2, label="a")+
+  annotate("text", x=4, y=1.2, label="a")+
+  annotate("text", x=5.2, y=4.4, label="c")+
+  annotate("text", x=6, y=1.2, label="a")+
+  annotate("text", x=7.2, y=1.8, label="ab")+
+  annotate("text", x=8, y=1.2, label="a")+
+  annotate("text", x=9.2, y=3.6, label="bc")+
+  annotate("text", x=10.2, y=3.8, label="bc")+
+  ggtitle("Solubilization of dipotassium phoshate by SynCom9 members")+
+  theme(axis.title.x=element_blank())+
+  theme(axis.title.y = element_text(size=10))+
+  theme(text=element_text(size=12, colour="black"))
+  
+
+```
+
+```{r, ggplot4,echo=F, message=F, warning=F, fig.height=8, fig.width=10}
+
+plot4<-ggplot(k2,aes(x=strain, y=SI_area, fill=strain))+
+ # geom_text(aes(label=letter, y=0.8),check_overlap=TRUE)+
+  geom_boxplot(outlier.shape = NA,alpha=0.8,width = 0.6)+
+  geom_jitter(aes(shape=assay), width = 0.3, alpha=0.7)+
+  theme_classic()+
+  guides(fill=FALSE)+
+  scale_fill_manual(values = c("#cdc5c2","#BF84D3","#fce883","#ffcf48", "#6699cc","#1974d2" ,"#324ab2", "#3bb08f","#17806d","#1a4876" ))+
+  labs(x= "Strains",
+       y= "SI diameter")+
+  theme(text = element_text(size=12))+
+  theme(axis.text.x = element_text(size = 11))+
+  theme(axis.text.y = element_text(size = 11))+
+  theme(legend.position = "bottom")+
+  stat_compare_means(method="kruskal.test", label.x=1, label.y=19)+
+  annotate("text", x=2, y=5, label="*")+
+  annotate("text", x=5, y=18, label="****")+
+  annotate("text", x=7, y=6, label="ns")+
+  annotate("text", x=9, y=13, label="****")+
+  annotate("text", x=10, y=14.5, label="****")+
+  ggtitle("Solubilization of dipotassium phoshate by SynCom9 members")+
+  theme(axis.title.x=element_blank())+
+  theme(axis.title.y = element_text(size=10))+
+  theme(text=element_text(size=12, colour="black"))
+
+
+legend<- get_legend(plot1 +theme(legend.position = "bottom")+ labs(fill="assay")+theme(legend.title = ))
+fig <- plot_grid(plot1, plot3, labels=c("A","B"), ncol=1)
+#title<- ggdraw()+draw_label("Solubilization of Dipotassium phosphate by SynCom9 members", fontface = "bold")
+plot_grid(fig,legend, nrow=2,ncol=1,rel_heights=c( 1,.1 ))
+
+ggsave("fig.png", height=7, width = 8)
+
+```
+\vspace{5mm}
+**Conclusion:** F004 (Domibacillus), F112 (Pseudomonas), F201 (Ensifer), F242 (Labrys), F247 (Pseudomonas) were able to form a halo around the colony and thus identified as P-solubilizer. The higher the SI value, the more dipotassium phosphate was solubilized. Values around 1 indicate strains that were not able to solubilize phosphorous. Different symbols indicate replicates. 
+\vspace{5mm}

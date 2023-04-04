@@ -1,0 +1,144 @@
+---
+title: "Biomass Analysis from Delphine"
+author: "Claudia Probst"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+    df_print: paged
+  html_document:
+    toc: yes
+    toc_depth: '3'
+    df_print: paged
+geometry: margin=2cm
+editor_options: 
+  chunk_output_type: console
+---
+
+
+```{r setup, include=FALSE}
+
+library(ggplot2)
+library(cowplot)
+library(tibble)
+library(tidyr)
+library(ggsignif)
+library(dplyr)
+library(car)
+library(RColorBrewer)
+library(multcompView)
+library(datasets)
+
+```
+
+```{r, echo=F, message=F, warning=F}
+
+setwd("~/Desktop/MASTER Pflanzenwissenschaften/Experiments/Delphine assay")
+
+mydata = read.csv("dry_weight_phosphate.csv", header = T, sep = ",", na.strings = "NA") #importing data
+mydata$Treatment = factor(mydata$Treatment, levels = c("LP_C", "LP_Syn9", "MP_C", "MP_Syn9", "HP_C", "HP_Syn9"), ordered = T)
+```
+
+```{r normal distribuion, echo=F, message=F, warning=F, fig.width=10, fig.height=10}
+
+
+LPC<- subset(mydata, Treatment=="LP_C")
+LPS<- subset(mydata, Treatment=="LP_Syn9")
+MPC<- subset(mydata, Treatment=="MP_C")
+MPS<- subset(mydata, Treatment=="MP_Syn9")
+HPC<- subset(mydata, Treatment=="HP_C")
+HPS<- subset(mydata, Treatment=="HP_Syn9")
+
+#low P
+par(mfrow=c(3:2))
+hist(LPC$dry_weight)
+qqplot<-scale(LPC$dry_weight)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(LPC$dry_weight)
+
+
+hist(LPS$dry_weight)
+qqplot<-scale(LPS$dry_weight)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(LPS$dry_weight)
+
+
+hist(MPC$dry_weight)
+qqplot<-scale(MPC$dry_weight)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(MPC$dry_weight)
+
+par(mfrow=c(3:2))
+hist(MPS$dry_weight)
+qqplot<-scale(MPS$dry_weight)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(MPS$dry_weight)
+
+hist(HPC$dry_weight)
+qqplot<-scale(HPC$dry_weight)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(HPC$dry_weight)
+
+hist(HPS$dry_weight)
+qqplot<-scale(HPS$dry_weight)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(HPS$dry_weight)
+
+```
+
+```{r anova+tukey,echo=F, message=F, warning=F, results=F}
+anova<- aov(dry_weight~Treatment, data=mydata)
+anova
+summary(anova)
+
+tukey<-TukeyHSD(anova)
+tukey
+```
+
+```{r, compact letter display dry weight,echo=F, message=F, warning=F, results=F}
+
+cld<- multcompLetters4(anova, tukey)
+print(cld)
+
+Tk<- group_by(mydata,Treatment) %>%
+  summarise(mean=mean(dry_weight,na.rm=TRUE), quant=quantile(dry_weight,na.rm=TRUE, probs=0.75))%>%
+  arrange(desc(mean))
+
+cld<- as.data.frame.list(cld$Treatment)
+Tk$cld<-cld$Letters
+print(Tk)
+```
+
+```{r, dry_weight plot,echo=F, message=F, warning=F}
+
+  
+F1<-mydata %>%
+  ggplot(aes(x=Treatment, y=dry_weight, fill=Treatment))+
+  geom_boxplot(outlier.shape = NA,alpha=0.8,width = 0.4)+
+  geom_jitter(width = 0.3, alpha=0.6)+
+  theme_classic()+
+  guides(fill="none")+
+  geom_text(data=Tk, aes(label=cld,x=Treatment, y=quant),vjust=-3.3,hjust=-0.8, size=4)+
+  scale_fill_manual(values = c("goldenrod1", "coral","lightskyblue1","cornflowerblue","darkolivegreen3","#339966"))+
+  labs( y= "Shoot Dry Weight (mg)",
+        x="Treatment" ,
+      title="Plant growth promoting effect by Syn8 strains")+
+  scale_y_continuous(limits = c(0, 50))+
+  scale_x_discrete(labels=c("LP C", " LP Syn8", "MP C", "MP Syn8", "HP C", "HP Syn8"))+
+  theme(legend.position = "bottom")+
+  theme(axis.title.x = element_text(size=12))+
+  theme(axis.title.y = element_text(size=12))+
+  theme(text=element_text(size=12, colour="black"))+
+  theme(plot.title = element_text())
+F1
+
+ # theme(legend.position = "TRUE")
+ggsave("boxplot_dry_weight.png", width=6, height=4) 
+```

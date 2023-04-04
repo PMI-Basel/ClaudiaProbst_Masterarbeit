@@ -1,0 +1,337 @@
+---
+title: "qPCR Analysis: Phosphor and nitrogen starvation response"
+author: "Claudia Probst"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+    df_print: paged
+  html_document:
+    toc: yes
+    toc_depth: '3'
+    df_print: paged
+geometry: margin=2cm
+editor_options: 
+  chunk_output_type: console
+--- 
+# Experimental Setup
+
+We're investigating the responses of *Arabidopsis thaliana* to phosphate and nitrogen starvation responses. We suggest that in a low-P environment without SynCom9, plants suffer from phosphate starvation. 
+
+\vspace{5mm}
+
+Treatments: 
+
+- low P control
+- low P SynCom9
+- high P control
+- high P SynCom9
+\vspace{5mm}
+
+```{r setup, include=FALSE, echo=F, message=F, warning=F}
+##clear the objects from memory ----
+rm(list=ls())
+
+# Load libraries ----
+#library(pcr)
+library(tidyverse)
+library(readxl)
+library(car)
+library(multcompView)
+library (cowplot)
+
+# Load data ----
+setwd("~/Desktop/MASTER Pflanzenwissenschaften/Experiments/qPCR/results")
+
+qPCR_pl1 <- read_excel("qPCR_plate1.xlsx", 
+                       sheet = "23-02-01-qPCRPlate1-Cla_compact", 
+                       range = "A4:H100")
+
+qPCR_pl2 <- read_excel("qPCR_plate2.xlsx", 
+                       sheet = "23-02-01-qPCRPlate2-Cla_compact", 
+                       range = "A4:H88")
+
+meta <- read_excel("design.xlsx", sheet = "Tabelle1") 
+
+meta1 <- meta %>% 
+  filter(plate==1) %>% 
+  select(Well, gene, sample_ID, sample_name, identification)
+
+meta2 <- meta %>% 
+  filter(plate==2) %>% 
+  select(Well, gene, sample_ID, sample_name, identification)
+
+# Tidy the data plate 1 ----
+
+qPCR1 <- qPCR_pl1 %>% 
+  separate(name, c("well", "sample_nr"), sep = "_") %>% 
+  left_join(meta1, by = c("well" = "Well")) %>% 
+  unique()
+
+# Tidy the data plate 2 ----
+
+qPCR2 <- qPCR_pl2 %>% 
+  separate(name, c("well", "sample_nr"), sep = "_") %>% 
+  left_join(meta2, by = c("well" = "Well")) %>% 
+  unique()
+
+rm(meta)  
+rm(meta1)
+rm(meta2)
+rm(qPCR_pl1)
+rm(qPCR_pl2)
+
+#combine all data ----
+qPCR <- rbind(qPCR1, qPCR2)
+
+rm(qPCR1)
+rm(qPCR2)
+
+```
+
+```{r AT4 gene, echo=F, message=F, warning=F }
+
+#checking for normal distribution of AT4 gene revealed no normal distribution
+LPS<- subset(qPCR, Amplicon=="AT4_SYN_lowP")
+HPS<- subset(qPCR, Amplicon=="AT4_SYN_highP")
+HPC<- subset(qPCR, Amplicon=="AT4_CONTROL_highP")
+LPC<- subset(qPCR, Amplicon=="AT4_CONTROL_highP")
+
+#log transformation because data are not normally distributed
+
+LPC$Cq_new <- log(LPC$Cq)
+LPS$Cq_new <- log(LPS$Cq)
+HPS$Cq_new <- log(HPS$Cq)
+HPC$Cq_new <- log(HPC$Cq)
+
+par(mfrow=c(3:2))
+hist(LPC$Cq_new)
+qqplot<-scale(LPC$Cq_new)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(LPC$Cq_new)
+
+hist(LPS$Cq_new)
+qqplot<-scale(LPS$Cq_new)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(LPS$Cq_new)
+
+hist(HPS$Cq_new)
+qqplot<-scale(HPS$Cq_new)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(HPS$Cq_new)
+
+par(mfrow=c(3:2))
+hist(HPC$Cq_new)
+qqplot<-scale(HPC$Cq_new)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(HPC$Cq_new)
+
+#Still, data is not normally distributed
+```
+
+```{r CEPD2 gene, echo=F, message=F, warning=F }
+
+#checking for normal distribution of CEPD2 gene revealed no normal distribution
+
+LPS<- subset(qPCR, Amplicon=="CEPD2_SYN_lowP")
+HPS<- subset(qPCR, Amplicon=="CEPD2_SYN_highP")
+HPC<- subset(qPCR, Amplicon=="CEPD2_CONTROL_highP")
+LPC<- subset(qPCR, Amplicon=="CEPD2_CONTROL_lowP")
+
+#log transformation because data are not normally distributed
+
+LPC$Cq_new <- log(LPC$Cq)
+LPS$Cq_new <- log(LPS$Cq)
+HPS$Cq_new <- log(HPS$Cq)
+HPC$Cq_new <- log(HPC$Cq)
+
+par(mfrow=c(3:2))
+hist(LPC$Cq_new)
+qqplot<-scale(LPC$Cq_new)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(LPC$Cq_new)
+
+hist(LPS$Cq_new)
+qqplot<-scale(LPS$Cq_new)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(LPS$Cq_new)
+
+hist(HPS$Cq_new)
+qqplot<-scale(HPS$Cq_new)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(HPS$Cq_new)
+
+par(mfrow=c(3:2))
+hist(HPC$Cq_new)
+qqplot<-scale(HPC$Cq_new)
+qqnorm(qqplot)
+qqline(qqplot)
+shapiro.test(HPC$Cq_new)
+
+#Still, data is not normally distributed
+```
+
+
+```{mean of replicates, echo=F, message=F, warning=F}
+
+# Calculate mean of replicates per sample
+
+ct <- qPCR %>% 
+  select(well,identification, sample_nr, sample_name, gene, Cq) %>% 
+  filter(!identification %in% c("5","25","31","32","33","34","38","39","40","41","42","43","44","45","46","47","48","100","101","102","104","107","112","113","114")) %>%
+  pivot_wider(names_from = gene, values_from = c(Cq)) %>% 
+  group_by(sample_nr, sample_name) %>% 
+  summarise(av_AT4=mean(AT4, na.rm=TRUE),
+            av_CEPD2=mean(CEPD2, na.rm = TRUE),
+            av_reference=mean(reference, na.rm = TRUE))
+
+E <- qPCR %>% 
+  group_by(gene) %>% 
+  summarise(E=mean(mean_PCR_eff)) %>% 
+  pivot_wider(names_from = gene, values_from = E)
+
+Ct_control <- ct %>% 
+  filter(sample_name=="lowP_control") %>% 
+  group_by(sample_name) %>% 
+  summarise(Ct_control_AT4=mean(av_AT4, na.rm=TRUE),
+            Ct_control_CEPD2=mean(av_CEPD2,na.rm=TRUE),
+            Ct_control_reference=mean(av_reference,na.rm=TRUE))
+
+
+```
+
+```{delta-delta Ct method, echo=F, message=F, warning=F} 
+
+deltadelta <- ct %>% 
+  mutate(delta_AT4=Ct_control$Ct_control_AT4 - av_AT4) %>% 
+  mutate(delta_CEPD2=Ct_control$Ct_control_CEPD2 - av_CEPD2) %>%
+  mutate(delta_reference=Ct_control$Ct_control_reference - av_reference) %>%
+  mutate(norm_expr_AT4=(E$AT4^delta_AT4)/(E$reference^delta_reference)) %>%
+  mutate(norm_expr_CEPD2=(E$CEPD2^delta_CEPD2)/(E$reference^delta_reference))
+
+```
+
+```{r Kruksal test,echo=F, message=F, warning=F}
+# AT4 ----
+
+Kruk1<-kruskal.test(norm_expr_AT4~sample_name, data=deltadelta)
+Kruk1
+
+
+Kruk2<-kruskal.test(norm_expr_CEPD2~sample_name, data=deltadelta)
+Kruk2
+
+
+```
+
+```{r}
+library(dunn.test)
+library(rstatix)
+
+dt1<-dunn.test(deltadelta$norm_expr_AT4,deltadelta$sample_name,method="bonferroni", kw=TRUE, wrap=TRUE)
+dt2<-dunn.test(deltadelta$norm_expr_CEPD2,deltadelta$sample_name,method="bonferroni", kw=TRUE, wrap=TRUE)
+
+```
+
+```{r figure, echo=F, message=F, warning=F}
+#my.comparison<-list(c("highP_control", "lowP_control"), c("lowP_control", "lowP_Syn9"),c("lowP_control", "highP_Syn9"),c("lowP_Syn9", "highP_Syn9"),c("highP_control", "highP_Syn9" ))
+
+library(ggpubr)
+library(multcompView)
+library(rcompanion)
+
+letters1 <- cldList(P.adjusted ~ comparisons, data=dt1, threshold=0.05)
+letters2 <- cldList(P.adjusted ~ comparisons, data=dt2, threshold=0.05)
+
+
+fig1<- deltadelta %>% 
+  select(norm_expr_AT4, sample_nr, sample_name) %>% 
+  pivot_longer(c(norm_expr_AT4), names_to = "gene", values_to = "norm_rel_expr") %>% 
+  ggplot(aes(x=sample_name, y=norm_rel_expr, fill=sample_name))+
+  geom_boxplot(outlier.shape = NA,alpha=0.8,width = 0.4)+
+  geom_jitter(width = 0.3, alpha=0.6)+
+  scale_fill_manual(values = c("darkolivegreen3","#339966","lightskyblue1","cornflowerblue"))+
+  guides(fill="none")+
+  theme_classic()+
+  annotate("text", x=4, y=4, label="")+
+  labs(x= "Treatment",
+       y= "relative expression",
+       title= "Phosphate Starvation Response (AT4)")+
+  annotate("text", x=1.1, y=0.5, label="ab")+
+  annotate("text", x=2.1, y=0.5, label="a")+
+  annotate("text", x=3.1, y=2.8, label="ab")+
+  annotate("text", x=4.1, y=2.8, label="b")+
+ #stat_compare_means(comparisons=my.comparison,method="wilcox.test")+
+  theme(plot.title = element_text(hjust=0.5))+
+  theme(axis.title.y = element_text(size=12))+
+  theme(text=element_text(size=12, colour="black"))+
+  scale_x_discrete(labels=c("HP C", "HP Syn8", "LP C", "LP Syn8"))
+  #facet_wrap(~gene, scales = "free")
+fig1
+
+fig2<- deltadelta %>% 
+  select(norm_expr_CEPD2, sample_nr, sample_name) %>% 
+  pivot_longer(c(norm_expr_CEPD2), names_to = "gene", values_to = "norm_rel_expr") %>% 
+  ggplot(aes(x=sample_name, y=norm_rel_expr, fill=sample_name))+
+  geom_boxplot(outlier.shape = NA,alpha=0.8,width = 0.4)+
+  geom_jitter(width = 0.3, alpha=0.6)+
+  scale_fill_manual(values = c("darkolivegreen3","#339966","lightskyblue1","cornflowerblue"))+
+  guides(fill="none")+
+  theme_classic()+
+  labs(x= "Treatment",
+       y= "relative expression",
+       title= "Nitogen Starvation Response (CEPD2)")+
+  annotate("text", x=1.1, y=7, label="a")+
+  annotate("text", x=2.1, y=7, label="ab")+
+  annotate("text", x=3.1, y=7, label="a")+
+  annotate("text", x=4.1, y=60, label="b")+
+  theme(plot.title = element_text(hjust=0.5))+
+  theme(axis.title.y = element_text(size=12))+
+  theme(text=element_text(size=12, colour="black"))+
+  scale_x_discrete(labels=c("HP C", "HP Syn8", "LP C", "LP Syn8"))
+  #facet_wrap(~gene, scales = "free")
+fig2
+
+#combine the two plots ----
+
+fig <-cowplot::plot_grid(fig1,
+                          fig2 + labs(colour=""),
+                          labels=c("A","B"),
+                          align = "hv",
+                          rel_heights = c(6,6),
+                          nrow=1, ncol=2)
+fig
+
+
+# save plots ----
+ggsave("qPCR_fig2.png", width = 8, height = 4)
+
+
+```
+
+# Analysis using N0 value directly (Henrys method) ----
+qPCR1_N0 <- qPCR %>% 
+  group_by(sample_nr, sample_name, gene) %>% 
+  summarise(N0Av=mean(N0)) %>% 
+  pivot_wider(names_from = gene, values_from = N0Av) %>% 
+  mutate(AT4norm=AT4/reference,
+         CEPD2norm=CEPD2/reference)
+
+plot2 <- qPCR1_N0 %>% 
+  select(AT4norm, CEPD2norm, sample_nr, sample_name) %>% 
+  pivot_longer(c(AT4norm, CEPD2norm), names_to = "gene", values_to = "norm_rel_expr") %>% 
+  ggplot(aes(x=sample_name, y=norm_rel_expr))+
+  geom_boxplot() +
+  facet_wrap(~gene, scales = "free")
+
+
+# This does the same! The only difference here is that the expression is not yet calculated relative to the control
+

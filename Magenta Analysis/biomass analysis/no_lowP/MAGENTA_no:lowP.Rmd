@@ -1,0 +1,393 @@
+---
+title: "Biomass analysis: no/low P treatment"
+author: "Claudia Probst"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+    df_print: paged
+  html_document:
+    toc: yes
+    toc_depth: '3'
+    df_print: paged
+geometry: margin=2cm
+  
+--- 
+# Experimental Setup
+
+We're investigating the responses of *Arabidopsis thaliana* to varying levels of P-fertilizer supply in presence or absence of a synthetic microbial community. For a biomass analysis, plants are harvested at day 21 post germination. The plants are cut at the basis of the stem and the biomass from the shoot and root systems are quantified. For a dry weight analysis, the shoots and roots were dried at 60°C for 1-2 days. The experiment was conducted three times with the same growth conditions and the same phosphate treatment. 
+
+\vspace{5mm}
+
+Treatments:
+
+- low P control
+- low P SynCom9
+- no P control
+- no P SynCom9
+\vspace{5mm}
+
+```{r setup, include=FALSE, echo=F, message=F, warning=F}
+
+rm(list=ls())
+
+library(ggplot2)
+library(cowplot)
+library(tibble)
+library(tidyr)
+library(ggsignif)
+library(dplyr)
+library(car)
+library(RColorBrewer)
+library(multcompView)
+library(datasets)
+
+setwd("~/Desktop/MASTER Pflanzenwissenschaften/Experiments/Magenta assay/Magenta LOW:NO")
+
+
+data<-read.csv(file="Magenta_no:lowP.csv", header=TRUE, sep=",")
+
+```
+
+```{r z_scores, echo=F, message=F, warning=F}
+#features of interest
+foi<- c("shoot_fresh_weight", "shoot_dry_weight", "roots_fresh_weight", "roots_dry_weight")
+data_foi<- subset.data.frame(data, select=c("Assays", "treatment", "SynCom9", foi))
+#prepare df
+data_norm <- data_foi
+data_norm[,(ncol(data_norm)-length(foi)+1):ncol(data_norm)] <- NA
+
+#normalise by z-scores each feature for each time point
+experiments <- unique(data_foi$Assays)
+
+#loop
+for (e in experiments) {
+  for (f in foi) {
+    x <- data_foi[data_foi$Assays == e, colnames(data_foi) == f] #get values for experiment 
+    z <- (x-mean(x))/(sd(x)) #compute z_score
+    data_norm[data_norm$Assays == e, colnames(data_norm) == f] <- z #store it
+  }
+}
+```
+# Statistical Analysis
+
+### Normal distribution \| Shoot and Root biomass
+
+Checking for normal distribution of the residuals
+\vspace{5mm}
+
+```{r normal distribuion, echo=F, message=F, warning=F, fig.width=10, fig.height=10}
+# subsetting different treatment groups
+
+#constant <- abs(min(data_norm$roots_dry_weight, na.rm = T))+1
+#data_norm$roots_dry_weight_transformed <- #log(data_norm$roots_dry_weight + constant)
+
+LPC<- subset(data_norm, treatment=="lowP_control")
+HPC<- subset(data_norm, treatment=="noP_control")
+LPS<- subset(data_norm, treatment=="lowP_SynCom9")
+HPS<- subset(data_norm, treatment=="noP_SynCom9")
+
+
+#low P control
+par(mfrow=c(2,2))
+for (i in 4:ncol(LPC)) {
+  hist(LPC[[i]], main =colnames(LPC[i]))
+}
+
+par(mfrow=c(2,2))
+for (i in 4:ncol(LPC)) {
+  qqnorm((LPC[[i]]),main =colnames(LPC[i]))
+  qqline((LPC[[i]]),main =colnames(LPC[i]))
+}
+
+shapiro.test(LPC$shoot_fresh_weight)
+shapiro.test(LPC$shoot_dry_weight)
+shapiro.test(LPC$roots_fresh_weight)
+shapiro.test(LPC$roots_dry_weight)
+
+#high P control
+par(mfrow=c(2,2))
+for (i in 4:ncol(HPC)) {
+  hist(HPC[[i]], main =colnames(HPC[i]))
+}
+
+par(mfrow=c(2,2))
+for (i in 4:ncol(HPC)) {
+  qqnorm((HPC[[i]]),main =colnames(HPC[i]))
+  qqline((HPC[[i]]),main =colnames(HPC[i]))
+}
+
+shapiro.test(HPC$shoot_fresh_weight)
+shapiro.test(HPC$shoot_dry_weight)
+shapiro.test(HPC$roots_fresh_weight)
+shapiro.test(HPC$roots_dry_weight)
+
+#low P SynCom9
+par(mfrow=c(2,2))
+for (i in 4:ncol(LPS)) {
+  hist(LPS[[i]], main =colnames(LPS[i]))
+}
+
+par(mfrow=c(2,2))
+for (i in 4:ncol(LPS)) {
+  qqnorm((LPS[[i]]),main =colnames(LPS[i]))
+  qqline((LPS[[i]]),main =colnames(LPS[i]))
+}
+
+shapiro.test(LPS$shoot_fresh_weight)
+shapiro.test(LPS$shoot_dry_weight)
+shapiro.test(LPS$roots_fresh_weight)
+shapiro.test(LPS$roots_dry_weight)
+
+#high P SynCom9
+par(mfrow=c(2,2))
+for (i in 4:ncol(HPS)) {
+  hist(HPS[[i]], main =colnames(HPS[i]))
+}
+
+par(mfrow=c(2,2))
+for (i in 4:ncol(HPS)) {
+  qqnorm((HPS[[i]]),main =colnames(HPS[i]))
+  qqline((HPS[[i]]),main =colnames(HPS[i]))
+}
+
+shapiro.test(HPS$shoot_fresh_weight)
+shapiro.test(HPS$shoot_dry_weight)
+shapiro.test(HPS$roots_fresh_weight)
+shapiro.test(HPS$roots_dry_weight)
+
+```
+
+
+### Anova \| Shoot and root biomass
+```{r,anova,echo=F, message=F, warning=F}
+A1<- aov(shoot_fresh_weight~treatment*Assays*SynCom9, data=data_norm)
+summary(A1)
+A2<- aov(shoot_dry_weight~treatment*Assays*SynCom9, data=data_norm)
+summary(A2)
+A3<- aov(roots_fresh_weight~treatment*SynCom9, data=data_norm)
+summary(A3)
+A4<- aov(roots_dry_weight~treatment*SynCom9, data=data_norm)
+summary(A4)
+
+anova1<- aov(shoot_fresh_weight~treatment, data=data_norm)
+anova1
+summary(anova1)
+anova2<- aov(shoot_dry_weight~treatment, data=data_norm)
+anova2
+summary(anova2)
+anova3<-aov(roots_fresh_weight~treatment, data=data_norm)
+anova3
+summary(anova3)
+anova4<-aov(roots_dry_weight~treatment, data=data_norm)
+anova4
+summary(anova4)
+
+```
+
+```{r,Post-hoc-test,echo=F, message=F, warning=F, results=F}
+tukey1<- TukeyHSD(anova1)
+tukey1
+tukey2<-TukeyHSD(anova2)
+tukey2
+tukey3<-TukeyHSD(anova3)
+tukey3
+tukey4<-TukeyHSD(anova4)
+tukey4
+
+```
+
+```{r, compact letter display shoot fresh weight,echo=F, message=F, warning=F, results=F}
+#shoot fresh weight
+cld1<- multcompLetters4(anova1, tukey1)
+print(cld1)
+
+Tk1<- group_by(data_norm,treatment) %>%
+  summarise(mean=mean(shoot_fresh_weight,na.rm=TRUE), quant=quantile(shoot_fresh_weight,na.rm=TRUE, probs=0.75))%>%
+  arrange(desc(mean))
+
+cld1<- as.data.frame.list(cld1$treatment)
+Tk1$cld1<-cld1$Letters
+print(Tk1)
+```
+
+#Figures 
+
+### Figure 1 \| Shoot fresh weight
+\vspace{5mm}
+
+```{r, ggplot_shoot_fresh_weight ,echo=F, message=F, warning=F}
+
+F1<-data_norm %>%
+  ggplot(aes(x=treatment, y=shoot_fresh_weight, fill=treatment))+
+  geom_boxplot(outlier.shape = NA,alpha=0.8,width = 0.4)+
+  geom_jitter(aes(shape=Assays), width = 0.3, alpha=0.6)+
+  theme_classic()+
+  guides(fill="none")+
+  geom_text(data=Tk1, aes(label=cld1,x=treatment, y=quant),vjust=-2.5,hjust=-0.5, size=4)+
+  scale_fill_manual(values = c("lightskyblue1","cornflowerblue","goldenrod1", "coral"))+
+  scale_shape_manual(values = c(16,17),labels=c("A1","A2"))+
+  labs(y= "shoot fresh weight (z-transformed)")+
+  scale_x_discrete(labels=c("LP C", " LP Syn9", "NP C", "NP Syn9"))+
+  scale_y_continuous(limits = c(-2, 3))+
+  theme(legend.position = "none")+
+  theme(axis.title.x=element_blank())+
+  theme(axis.title.y = element_text(size=9))+
+  theme(text=element_text(size=12, colour="black"))+
+  theme(plot.title = element_text(hjust=0.5))
+
+F1
+ggsave("boxplot_shoot_fresh_weight_no_low.png", width=6, height=4) 
+```
+
+```{r, compact letter display shoot dry weight,echo=F, message=F, warning=F, results=F}
+
+#shoot dry weight
+cld2<- multcompLetters4(anova2, tukey2)
+print(cld2)
+
+Tk2<- group_by(data_norm,treatment) %>%
+  summarise(mean=mean(shoot_dry_weight,na.rm=TRUE), quant=quantile(shoot_dry_weight,na.rm=TRUE, probs=0.75))%>%
+  arrange(desc(mean))
+
+cld2<- as.data.frame.list(cld2$treatment)
+Tk2$cld2<-cld2$Letters
+print(Tk2)
+```
+
+### Figure 2 \| Shoot dry weight
+\vspace{5mm}
+
+```{r, ggplot_shoot_dry_weight,echo=F, message=F, warning=F}
+#shoot dry weight
+F2<-data_norm %>%
+  ggplot(aes(x=treatment, y=shoot_dry_weight, fill=treatment))+
+  geom_boxplot(outlier.shape = NA,alpha=0.8,width = 0.4)+
+  geom_jitter(aes(shape=Assays), width = 0.3, alpha=0.6)+
+  theme_classic()+
+  guides(fill="none")+
+  geom_text(data=Tk2, aes(label=cld2,x=treatment, y=quant),vjust=-3.9,hjust=-0.5, size=4)+
+  scale_fill_manual(values = c("lightskyblue1","cornflowerblue","goldenrod1", "coral"))+
+  scale_shape_manual(values = c(16,17),labels=c("A1","A2"))+
+  labs(y= "shoot dry weight (z-transformed)")+
+  scale_x_discrete(labels=c("LP C", " LP Syn9", "NP C", "NP Syn9"))+
+  scale_y_continuous(limits = c(-2, 3))+
+  theme(legend.position = "none")+
+  theme(axis.title.x=element_blank())+
+  theme(axis.title.y = element_text(size=9))+
+  theme(text=element_text(size=12, colour="black"))+
+  theme(plot.title = element_text(hjust=0.5))
+
+F2
+ggsave("boxplot_shoot_dry_weight_no_low.png",width=6, height=4 ) 
+```
+
+```{r, compact letter display roots fresh weight,echo=F, message=F, warning=F, results=F}
+
+#roots fresh weight
+cld3<- multcompLetters4(anova3, tukey3)
+print(cld3)
+
+Tk3<- group_by(data_norm,treatment) %>%
+  summarise(mean=mean(roots_fresh_weight, na.rm=TRUE), quant=quantile(roots_fresh_weight, probs=0.75, na.rm=TRUE))%>%
+  arrange(desc(mean))
+
+cld3<- as.data.frame.list(cld3$treatment)
+Tk3$cld3<-cld3$Letters
+print(Tk3)
+```
+
+### Figure 3 \| Root fresh weight
+\vspace{5mm}
+
+```{r, ggplot_root_fresh_weight,echo=F, message=F, warning=F}
+#roots fresh weight
+
+F3<-data_norm %>%
+  ggplot(aes(x=treatment, y=roots_fresh_weight, fill=treatment))+
+  geom_boxplot(outlier.shape = NA,alpha=0.8,width = 0.4)+
+  geom_jitter(width = 0.3, alpha=0.6)+
+  theme_classic()+
+  guides(fill="none")+
+  geom_text(data=Tk3, aes(label=cld3,x=treatment, y=quant),vjust=-2.5,hjust=-0.5, size=4)+
+  scale_fill_manual(values = c("lightskyblue1","cornflowerblue","goldenrod1", "coral"))+
+  scale_shape_manual(values = c(16),labels=c("A1"))+
+  labs(y= "shoot dry weight (z-transformed)")+
+  scale_x_discrete(labels=c("LP C", " LP Syn9", "NP C", "NP Syn9"))+
+  scale_y_continuous(limits = c(-2, 3))+
+  theme(legend.position = "none")+
+  theme(axis.title.x=element_blank())+
+  theme(axis.title.y = element_text(size=9))+
+  theme(text=element_text(size=12, colour="black"))+
+  theme(plot.title = element_text(hjust=0.5))
+
+F3
+ggsave("boxplot_roots_fresh_weight_no_low.png",width=6, height=4 ) 
+```
+
+```{r, compact letter display roots dry weight,echo=F, message=F, warning=F, results=F}
+
+#roots dry weight
+cld4<- multcompLetters4(anova4, tukey4)
+print(cld4)
+
+Tk4<- group_by(data_norm,treatment) %>%
+  summarise(mean=mean(roots_dry_weight, na.rm=TRUE), quant=quantile(roots_dry_weight, probs=0.75, na.rm=TRUE))%>%
+  arrange(desc(mean))
+
+cld4<- as.data.frame.list(cld4$treatment)
+Tk4$cld4<-cld4$Letters
+print(Tk4)
+
+```
+
+### Figure 4 \| Root dry weight
+\vspace{5mm}
+
+```{r, ggplot_root_dry_weight,echo=F, message=F, warning=F}
+#roots dry weight
+F4<-data_norm %>%
+  ggplot(aes(x=treatment, y=roots_dry_weight, fill=treatment))+
+  geom_boxplot(outlier.shape = NA,alpha=0.8,width = 0.4)+
+  geom_jitter(width = 0.3, alpha=0.6)+
+  theme_classic()+
+  guides(fill="none")+
+  geom_text(data=Tk4, aes(label=cld4,x=treatment, y=quant),vjust=-2.7,hjust=-0.5, size=4)+
+  scale_fill_manual(values = c("lightskyblue1","cornflowerblue","goldenrod1", "coral"))+
+  scale_shape_manual(values = c(16),labels=c("A1"))+
+  labs(y= "shoot dry weight (z-transformed)")+
+  scale_x_discrete(labels=c("LP C", " LP Syn9", "NP C", "NP Syn9"))+
+  scale_y_continuous(limits = c(-2, 3))+
+  theme(legend.position = "none")+
+  theme(axis.title.x=element_blank())+
+  theme(axis.title.y = element_text(size=9))+
+  theme(text=element_text(size=12, colour="black"))+
+  theme(plot.title = element_text(hjust=0.5))
+
+F4
+ggsave("boxplot_roots_dry_weight_no_low.png",width=6, height=4) 
+```
+
+```{r, plot_grid,echo=F, message=F, warning=F}
+fig <- plot_grid(F1 + labs(colour=""),
+                F2 + labs(colour=""),
+                F3 + labs(colour=""),
+                F4 + labs(colour=""),
+               labels=c("A","B","C","D"),
+               align = "hv",
+               rel_heights = c(1,1),
+               nrow=2, ncol=2, label_size = 11)
+
+legend<- get_legend(F1 +theme(legend.position = "bottom")+ labs(fill="treatment")+theme(legend.title = ))
+
+title<- ggdraw()+draw_label("Biomass effects by SynCom9", fontface = "bold")
+
+
+FIG<- plot_grid(fig,legend, nrow=2,ncol=1,rel_heights=c( 1,.1 ))
+FIG
+
+ggsave("figure.png",width=6, height=6) 
+
+
+```
