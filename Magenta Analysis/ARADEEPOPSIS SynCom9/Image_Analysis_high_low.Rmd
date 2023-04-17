@@ -89,7 +89,7 @@ rm(data_2)
 
 # select features of interest
 foi <- c("plant_region_red_channel","plant_region_green_channel", "plant_region_blue_channel", "plant_region_chroma_ratio", "plant_region_chroma_difference", "plant_region_chroma_base", "plant_region_green_strength","plant_region_blue_green_ratio", "plant_region_area", "plant_region_filled_area", "plant_region_convex_area","plant_region_equivalent_diameter", "plant_region_major_axis_length","plant_region_minor_axis_length", "plant_region_perimeter","plant_region_eccentricity", "plant_region_extent", "plant_region_solidity", "plant_region_aspect_ratio")
-data_foi <- subset.data.frame(data_total, select = c("file", "Assays", "treatment", "date", "day", foi))
+data_foi <- subset.data.frame(data_total, select = c("file", "Assays", "treatment","SynCom9", "date", "day", foi))
 
 ```
 
@@ -128,7 +128,7 @@ all_data<- subset(data_foi_norm, day=="day 21")
 ```{r normal distribution last timepoint,echo=F, message=F, warning=F, fig.show="hide"}
 
 par(mfrow=c(1:2))
-for (i in 6:ncol(all_data)) {
+for (i in 7:ncol(all_data)) {
   hist(all_data[[i]], main =colnames(all_data[i]))
 }
 
@@ -140,12 +140,12 @@ HPS<- subset(all_data, treatment=="highP_SynCom9")
 
 #low P control
 par(mfrow=c(2,2))
-for (i in 6:ncol(LPC)) {
+for (i in 7:ncol(LPC)) {
   hist(LPC[[i]], main =colnames(LPC[i]))
 }
 
 par(mfrow=c(2,2))
-for (i in 6:ncol(LPC)) {
+for (i in 7:ncol(LPC)) {
   qqnorm((LPC[[i]]),main =colnames(LPC[i]))
   qqline((LPC[[i]]),main =colnames(LPC[i]))
 }
@@ -165,12 +165,12 @@ constant <- abs(min(LPC$plant_region_major_axis_length, na.rm = T))+1
 LPC$plant_region_major_axis_length <- log(LPC$plant_region_major_axis_length + constant)
 
 par(mfrow=c(2,2))
-for (i in 6:ncol(LPS)) {
+for (i in 7:ncol(LPS)) {
   hist(LPS[[i]], main =colnames(LPS[i]))
 }
 
 par(mfrow=c(2,2))
-for (i in 6:ncol(LPS)) {
+for (i in 7:ncol(LPS)) {
   qqnorm((LPS[[i]]),main =colnames(LPS[i]))
   qqline((LPS[[i]]),main =colnames(LPS[i]))
 }
@@ -181,12 +181,12 @@ shapiro.test(LPC$plant_region_major_axis_length)
 
 #high P control
 par(mfrow=c(2,2))
-for (i in 6:ncol(HPC)) {
+for (i in 7:ncol(HPC)) {
   hist(HPC[[i]], main =colnames(HPC[i]))
 }
 
 par(mfrow=c(2,2))
-for (i in 6:ncol(HPC)) {
+for (i in 7:ncol(HPC)) {
   qqnorm((HPC[[i]]),main =colnames(HPC[i]))
   qqline((HPC[[i]]),main =colnames(HPC[i]))
 }
@@ -206,12 +206,12 @@ constant <- abs(min(HPC$plant_region_major_axis_length, na.rm = T))+1
 HPC$plant_region_major_axis_length <- log(HPC$plant_region_major_axis_length + constant)
 
 par(mfrow=c(2,2))
-for (i in 6:ncol(LPS)) {
+for (i in 7:ncol(LPS)) {
   hist(LPS[[i]], main =colnames(LPS[i]))
 }
 
 par(mfrow=c(2,2))
-for (i in 6:ncol(LPS)) {
+for (i in 7:ncol(LPS)) {
   qqnorm((LPS[[i]]),main =colnames(LPS[i]))
   qqline((LPS[[i]]),main =colnames(LPS[i]))
 }
@@ -223,12 +223,12 @@ shapiro.test(HPC$plant_region_major_axis_length)
 
 #low P SynCom9
 par(mfrow=c(2,2))
-for (i in 6:ncol(LPS)) {
+for (i in 7:ncol(LPS)) {
   hist(LPS[[i]], main =colnames(LPS[i]))
 }
 
 par(mfrow=c(2,2))
-for (i in 6:ncol(LPS)) {
+for (i in 7:ncol(LPS)) {
   qqnorm((LPS[[i]]),main =colnames(LPS[i]))
   qqline((LPS[[i]]),main =colnames(LPS[i]))
 }
@@ -249,12 +249,12 @@ LPS$plant_region_major_axis_length <- log(LPS$plant_region_green_strength + cons
 
 
 par(mfrow=c(2,2))
-for (i in 6:ncol(LPS)) {
+for (i in 7:ncol(LPS)) {
   hist(LPS[[i]], main =colnames(LPS[i]))
 }
 
 par(mfrow=c(2,2))
-for (i in 6:ncol(LPS)) {
+for (i in 7:ncol(LPS)) {
   qqnorm((LPS[[i]]),main =colnames(LPS[i]))
   qqline((LPS[[i]]),main =colnames(LPS[i]))
 }
@@ -267,12 +267,12 @@ shapiro.test(LPS$plant_region_major_axis_length)
 
 #high P SynCom9
 par(mfrow=c(2,2))
-for (i in 6:ncol(HPS)) {
+for (i in 7:ncol(HPS)) {
   hist(HPS[[i]], main =colnames(HPS[i]))
 }
 
 par(mfrow=c(2,2))
-for (i in 6:ncol(HPS)) {
+for (i in 7:ncol(HPS)) {
   qqnorm((HPS[[i]]),main =colnames(HPS[i]))
   qqline((HPS[[i]]),main =colnames(HPS[i]))
 }
@@ -292,12 +292,12 @@ constant <- abs(min(HPS$plant_region_major_axis_length, na.rm = T))+1
 HPS$plant_region_major_axis_length <- log(HPS$plant_region_green_strength + constant)
 
 par(mfrow=c(2,2))
-for (i in 6:ncol(LPS)) {
+for (i in 7:ncol(LPS)) {
   hist(LPS[[i]], main =colnames(LPS[i]))
 }
 
 par(mfrow=c(2,2))
-for (i in 6:ncol(LPS)) {
+for (i in 7:ncol(LPS)) {
   qqnorm((LPS[[i]]),main =colnames(LPS[i]))
   qqline((LPS[[i]]),main =colnames(LPS[i]))
 }
@@ -312,13 +312,13 @@ shapiro.test(HPS$plant_region_major_axis_length)
 
 #merging all subsets to one dataframe
 
-sub1 <- subset.data.frame(HPS, select = c( "Assays", "treatment", "date", "day", "plant_region_area", "plant_region_major_axis_length", "plant_region_green_strength"))
+sub1 <- subset.data.frame(HPS, select = c( "Assays", "treatment", "date", "day","SynCom9", "plant_region_area", "plant_region_major_axis_length", "plant_region_green_strength"))
 
-sub2 <- subset.data.frame(HPC, select = c( "Assays", "treatment", "date", "day", "plant_region_area", "plant_region_major_axis_length", "plant_region_green_strength"))
+sub2 <- subset.data.frame(HPC, select = c( "Assays", "treatment", "date", "day","SynCom9", "plant_region_area", "plant_region_major_axis_length", "plant_region_green_strength"))
 
-sub3 <- subset.data.frame(LPS, select = c( "Assays", "treatment", "date", "day", "plant_region_area", "plant_region_major_axis_length", "plant_region_green_strength"))
+sub3 <- subset.data.frame(LPS, select = c( "Assays", "treatment", "date", "day","SynCom9", "plant_region_area", "plant_region_major_axis_length", "plant_region_green_strength"))
 
-sub4 <- subset.data.frame(LPC, select = c( "Assays", "treatment", "date", "day", "plant_region_area", "plant_region_major_axis_length", "plant_region_green_strength"))
+sub4 <- subset.data.frame(LPC, select = c( "Assays", "treatment", "date", "day","SynCom9", "plant_region_area", "plant_region_major_axis_length", "plant_region_green_strength"))
 
 
 data_1 <- rbind(sub1, sub2)
@@ -352,11 +352,11 @@ cat("The percentage difference between low P control and low P SynCom9 is", roun
 
 ### Anova \| Size / Color / Shape
 ```{r,anova,echo=F, message=F, warning=F}
-a1<- aov(plant_region_area~treatment*Assays, data=data_total)
+a1<- aov(plant_region_area~treatment*SynCom9*Assays, data=data_total)
 summary(a1)
-a2<- aov(plant_region_green_strength~treatment*Assays, data=data_total)
+a2<- aov(plant_region_green_strength~treatment*SynCom9*Assays, data=data_total)
 summary(a2)
-a3 <- aov(plant_region_major_axis_length~treatment*Assays, data=data_total)
+a3 <- aov(plant_region_major_axis_length~treatment*SynCom9*Assays, data=data_total)
 summary(a3)
 
 anova1<- aov(plant_region_area~treatment, data=data_total)
