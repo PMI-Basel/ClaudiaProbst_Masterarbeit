@@ -255,15 +255,23 @@ plot1<- ca %>%
   theme(axis.title.x=element_blank())+
   theme(axis.title.y = element_text(size=10))+
   theme(text=element_text(size=12, colour="black"))
-
+plot1
 
 ```
 
 ```{r, ggplot2,echo=F, message=F, warning=F, fig.height=8, fig.width=10}
 
+letters <- cldList(P.adjusted ~ comparisons, data=dt2, threshold=0.05)
+letters$Group <- gsub("^F4$", "F004", letters$Group)
+letters$Group <- gsub("^F41$", "F041", letters$Group)
+letters$Group <- gsub("^F42$", "F042", letters$Group)
+letters$Group <- gsub("^F21$", "F201", letters$Group)
+
+ca$letter <- NA
+for (s in unique(ca$strain)) {ca$letter[ca$strain==s] <- letters$Letter[letters$Group==s]}
 
 plot2<-ggplot(ca,aes(x=strain, y=SI_area, fill=strain))+
- # geom_text(aes(label=letter, y=0.6),check_overlap=TRUE)+
+ #geom_text(aes(label=letter, y=0.6),check_overlap=TRUE)+
   geom_boxplot(outlier.shape = NA,alpha=0.6,width = 0.6)+
   geom_jitter(aes(shape=assay), width = 0.3, alpha=0.7)+
   theme_classic()+
@@ -274,22 +282,29 @@ plot2<-ggplot(ca,aes(x=strain, y=SI_area, fill=strain))+
   theme(text = element_text(size=12))+
   theme(axis.text.x = element_text(size =11))+
   theme(axis.text.y = element_text(size =11))+
-  theme(legend.position = "bottom")+
-  stat_compare_means(method="kruskal.test", label.x=1, label.y=16)+
-  annotate("text", x=5, y=5, label="****")+
-  annotate("text", x=9, y=16, label="****")+
-  annotate("text", x=10, y=16, label="****")+
+  theme(legend.position = "none")+
+ #stat_compare_means(method="kruskal.test", label.x=1, label.y=16)+
+  annotate("text", x=1, y=2, label="a")+
+  annotate("text", x=2, y=2, label="a")+
+  annotate("text", x=3, y=2, label="a")+
+  annotate("text", x=4, y=2, label="a")+
+  annotate("text", x=5.2, y=5, label="b")+
+  annotate("text", x=6, y=2, label="a")+
+  annotate("text", x=7, y=2, label="a")+
+  annotate("text", x=8, y=2, label="a")+
+  annotate("text", x=9.2, y=12, label="b")+
+  annotate("text", x=10.2, y=5, label="b")+
   ggtitle("Solubilization of tricalcium phosphate by SynCom9 members")+
   theme(axis.title.x=element_blank())+
   theme(axis.title.y = element_text(size=10))+
   theme(text=element_text(size=12, colour="black"))
+plot2
 
+#fig1 <- plot_grid(plot1, plot2, labels=c("A","B"), ncol=1)
+#title<- ggdraw()+draw_label("Solubilization of Tricalcium phosphate by SynCom9 members", #fontface = "bold")
+#plot_grid(title,fig1, ncol=1,rel_heights = c(0.1,1))
 
-fig1 <- plot_grid(plot1, plot2, labels=c("A","B"), ncol=1)
-title<- ggdraw()+draw_label("Solubilization of Tricalcium phosphate by SynCom9 members", fontface = "bold")
-plot_grid(title,fig1, ncol=1,rel_heights = c(0.1,1))
-
-ggsave("fig1.png", height=8, width = 10)
+#ggsave("fig1.png", height=8, width = 10)
 
 
 ```
@@ -374,29 +389,44 @@ plot3<-ggplot(k2,aes(x=strain, y=SI_diameter, fill=strain))+
 
 ```{r, ggplot4,echo=F, message=F, warning=F, fig.height=8, fig.width=10}
 
+letters <- cldList(P.adjusted ~ comparisons, data=dt4, threshold=0.05)
+letters$Group <- gsub("^F4$", "F004", letters$Group)
+letters$Group <- gsub("^F41$", "F041", letters$Group)
+letters$Group <- gsub("^F42$", "F042", letters$Group)
+letters$Group <- gsub("^F21$", "F201", letters$Group)
+
+k2$letter <- NA
+for (s in unique(k2$strain)) {k2$letter[k2$strain==s] <- letters$Letter[letters$Group==s]}
+
 plot4<-ggplot(k2,aes(x=strain, y=SI_area, fill=strain))+
- # geom_text(aes(label=letter, y=0.8),check_overlap=TRUE)+
+  #geom_text(aes(label=letter, y=0.8),check_overlap=TRUE)+
   geom_boxplot(outlier.shape = NA,alpha=0.8,width = 0.6)+
   geom_jitter(aes(shape=assay), width = 0.3, alpha=0.7)+
   theme_classic()+
   guides(fill=FALSE)+
   scale_fill_manual(values = c("#cdc5c2","#BF84D3","#fce883","#ffcf48", "#6699cc","#1974d2" ,"#324ab2", "#3bb08f","#17806d","#1a4876" ))+
   labs(x= "Strains",
-       y= "SI diameter")+
+       y= "SI area")+
   theme(text = element_text(size=12))+
   theme(axis.text.x = element_text(size = 11))+
   theme(axis.text.y = element_text(size = 11))+
-  theme(legend.position = "bottom")+
-  stat_compare_means(method="kruskal.test", label.x=1, label.y=19)+
-  annotate("text", x=2, y=5, label="*")+
-  annotate("text", x=5, y=18, label="****")+
-  annotate("text", x=7, y=6, label="ns")+
-  annotate("text", x=9, y=13, label="****")+
-  annotate("text", x=10, y=14.5, label="****")+
+  theme(legend.position = "none")+
+  annotate("text", x=1, y=2, label="a")+
+  annotate("text", x=2.2, y=4, label="b")+
+  annotate("text", x=3, y=2, label="a")+
+  annotate("text", x=4, y=2, label="a")+
+  annotate("text", x=5.2, y=12.8, label="c")+
+  annotate("text", x=6, y=2, label="a")+
+  annotate("text", x=7.2, y=3.5, label="ab")+
+  annotate("text", x=8, y=2, label="a")+
+  annotate("text", x=9.2, y=12, label="bc")+
+  annotate("text", x=10.2, y=14, label="bc")+
+  #stat_compare_means(method="kruskal.test", label.x=1, label.y=19)+
   ggtitle("Solubilization of dipotassium phoshate by SynCom9 members")+
   theme(axis.title.x=element_blank())+
   theme(axis.title.y = element_text(size=10))+
   theme(text=element_text(size=12, colour="black"))
+plot4
 
 
 legend<- get_legend(plot1 +theme(legend.position = "bottom")+ labs(fill="assay")+theme(legend.title = ))
@@ -404,7 +434,15 @@ fig <- plot_grid(plot1, plot3, labels=c("A","B"), ncol=1)
 #title<- ggdraw()+draw_label("Solubilization of Dipotassium phosphate by SynCom9 members", fontface = "bold")
 plot_grid(fig,legend, nrow=2,ncol=1,rel_heights=c( 1,.1 ))
 
-ggsave("fig.png", height=7, width = 8)
+ggsave("fig_SI_diameter.png", height=7, width = 8)
+
+
+legend<- get_legend(plot2 +theme(legend.position = "bottom")+ labs(fill="assay")+theme(legend.title = ))
+fig <- plot_grid(plot2, plot4, labels=c("A","B"), ncol=1)
+#title<- ggdraw()+draw_label("Solubilization of Dipotassium phosphate by SynCom9 members", fontface = "bold")
+plot_grid(fig,legend, nrow=2,ncol=1,rel_heights=c( 1,.1 ))
+
+ggsave("fig_SI_area.png", height=7, width = 8)
 
 ```
 \vspace{5mm}
