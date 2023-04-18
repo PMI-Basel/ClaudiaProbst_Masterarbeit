@@ -467,7 +467,7 @@ DAT_krusk
 
 \pagebreak
 
-### Figure 7 | Statistical Analysis: For each strain we plot the Abundance over treatment. We apply the Wicoxon-rank sum test in order to compare 2 non-parametic groups. 
+### Figure 7a | Statistical Analysis: For each strain we plot the Abundance over treatment. We apply the Wicoxon-rank sum test in order to compare 2 non-parametic groups. 
 
 ```{r SynCom -treatment  , echo=F, warning=F, message=F, fig.height=8, fig.width=8}
 
@@ -624,7 +624,7 @@ F233<- df %>%
 
 
 
-fig7 <- plot_grid(F201 + labs(colour=""),
+fig7a <- plot_grid(F201 + labs(colour=""),
                 F247 + labs(colour=""),
                 F112 + labs(colour=""),
                 F004 + labs(colour=""),
@@ -634,16 +634,184 @@ fig7 <- plot_grid(F201 + labs(colour=""),
                align = "hv",
                rel_heights = c(1,1),
                nrow=2, ncol=3, label_size = 11)
-fig7
-#ggsave("fig7.3.png", height=7, width=10)
+fig7a
+#ggsave("fig7a.png", height=7, width=10)
 
 ```
 **Conclusion** It seems that the different treatments don't influence the colonization of the roots by SynCom members. Except for *Domibacillus* F004 where we have significant difference between low P and high P treatment. 
 
 \vspace{5mm}
 
+### Figure 7b | Statistical Analysis: For each strain we plot the **relative abundance* over treatment. We apply the Wicoxon-rank sum test in order to compare 2 non-parametic groups. 
+
+```{r SynCom -treatment  , echo=F, warning=F, message=F, fig.height=8, fig.width=8}
+
+library(ggpubr)
+my.comparison<-list(c("low P", "medium P"), c("medium P", "high P"),c("low P", "high P"))
+
+F201<- df %>%  
+  filter(type=="roots"& SynComStrain=="F201")%>% 
+  mutate(treatment = factor(treatment, levels = c("low P", "medium P", "high P"))) %>% 
+  ggplot(aes(x=treatment, y= Abundance, fill = treatment)) +
+  geom_boxplot(outlier.shape=NA,alpha=0.8,width = 0.4)+
+  geom_jitter(alpha=0.4, width = 0.3)+ 
+  guides(fill="none")+
+  ggtitle("F201 - Ensifer")+
+  xlab("Treatment") +
+  ylab("Relative abundance [%]") +
+  scale_fill_manual(values=c("darkgoldenrod1","cornflowerblue","aquamarine3")) +
+  scale_y_continuous(limits=c(0,42))+
+  stat_compare_means(comparisons=my.comparison,method="wilcox.test")+
+  theme_classic() +
+  labs(x = "Treatment", 
+       title = "F201",
+       color = "Treatment")
+
+
+F247<- df %>%  
+  filter(type=="roots"& SynComStrain=="F247")%>% 
+  mutate(treatment = factor(treatment, levels = c("low P", "medium P", "high P"))) %>% 
+  ggplot(aes(x=treatment, y= Abundance, fill = treatment)) +
+  geom_boxplot(outlier.shape=NA,alpha=0.8,width = 0.4)+
+  geom_jitter(alpha=0.4, width = 0.3)+ 
+  guides(fill="none")+
+  ggtitle("F247 - Pseudomonas")+
+  xlab("Treatment") +
+  ylab("Relative abundance [%]") +
+  scale_fill_manual(values=c("darkgoldenrod1","cornflowerblue","aquamarine3")) +
+  scale_y_continuous(limits=c(0,25))+
+  stat_compare_means(comparisons=my.comparison,method="wilcox.test")+
+  theme_classic() +
+ # scale_color_manual()+
+  labs(x = "Treatment", 
+       title = "F247",
+       color = "Treatment")
+
+  
+F112<- df %>%  
+  filter(type=="roots"& SynComStrain=="F112")%>% 
+  mutate(treatment = factor(treatment, levels = c("low P", "medium P", "high P"))) %>% 
+  ggplot(aes(x=treatment, y= Abundance, fill = treatment)) +
+  geom_boxplot(outlier.shape=NA,alpha=0.8,width = 0.4)+
+  geom_jitter(alpha=0.4, width = 0.3)+ 
+  guides(fill="none")+
+  ggtitle("F112 - Pseudomonas")+
+  xlab("Treatment") +
+  ylab("Relative abundance [%]") +
+  scale_fill_manual(values=c("darkgoldenrod1","cornflowerblue","aquamarine3")) +
+  scale_y_continuous(limits=c(0,57))+
+ # facet_wrap(~SynComStrain, scales = "free") +
+  stat_compare_means(comparisons=my.comparison,method="wilcox.test")+
+  theme_classic() +
+ # scale_color_manual()+
+  labs(x = "Treatment", 
+       title = "F112",
+       color = "Treatment")
+
+
+F004<- df %>%  
+  filter(type=="roots"& SynComStrain=="F004")%>% 
+  mutate(treatment = factor(treatment, levels = c("low P", "medium P", "high P"))) %>% 
+  ggplot(aes(x=treatment, y= Abundance, fill = treatment)) +
+  geom_boxplot(outlier.shape=NA,alpha=0.8,width = 0.4)+
+  geom_jitter(alpha=0.4, width = 0.3)+ 
+  guides(fill="none")+
+  ggtitle("F004 - Domibacillus")+
+  xlab("Treatment") +
+  ylab("Relative abundance [%]") +
+  scale_fill_manual(values=c("darkgoldenrod1","cornflowerblue","aquamarine3")) +
+  scale_y_continuous(limits=c(0,3.6))+
+  #facet_wrap(~SynComStrain, scales = "free") +
+  stat_compare_means(comparisons=my.comparison,method="wilcox.test")+
+  theme_classic() +
+ # scale_color_manual()+
+  labs(x = "Treatment",
+       title = "F004",
+       color = "Treatment")
+
+
+F125<- df %>%  
+  filter(type=="roots"& SynComStrain=="F125")%>% 
+  mutate(treatment = factor(treatment, levels = c("low P", "medium P", "high P"))) %>% 
+  ggplot(aes(x=treatment, y= Abundance, fill = treatment)) +
+  geom_boxplot(outlier.shape=NA,alpha=0.8,width = 0.4)+
+  geom_jitter(alpha=0.4, width = 0.3)+ 
+  guides(fill="none")+
+  ggtitle("F125 - Rhodanobacter")+
+  xlab("Treatment") +
+  ylab("Relative abundance [%]") +
+  scale_fill_manual(values=c("darkgoldenrod1","cornflowerblue","aquamarine3")) +
+  scale_y_continuous(limits=c(0,10.5))+
+  #facet_wrap(~SynComStrain, scales = "free") +
+  stat_compare_means(comparisons=my.comparison,method="wilcox.test")+
+  theme_classic() +
+      labs(x = "Treatment",
+       title = "F125")
+
+  
+F042<- df %>%  
+  filter(type=="roots"& SynComStrain=="F042")%>% 
+  mutate(treatment = factor(treatment, levels = c("low P", "medium P", "high P"))) %>% 
+  ggplot(aes(x=treatment, y= Abundance, fill = treatment)) +
+  geom_boxplot(outlier.shape=NA,alpha=0.8,width = 0.4)+
+  geom_jitter(alpha=0.4, width = 0.3)+ 
+  guides(fill="none")+
+  ggtitle("F042 - Variovorax")+
+  xlab("Treatment") +
+  ylab("Relative abundance [%]") +
+  scale_fill_manual(values=c("darkgoldenrod1","cornflowerblue","aquamarine3")) +
+  scale_y_continuous(limits=c(-0.5,0.5))+
+  #facet_wrap(~SynComStrain, scales = "free") +
+  stat_compare_means(comparisons=my.comparison,method="wilcox.test")+
+  theme_classic() +
+ # scale_color_manual()+
+  labs(x = "Treatment",
+       title = "F042",
+       color = "Treatment")
+
+
+F233<- df %>%  
+  filter(type=="roots"& SynComStrain=="F233")%>% 
+  mutate(treatment = factor(treatment, levels = c("low P", "medium P", "high P"))) %>% 
+  ggplot(aes(x=treatment, y= Abundance, fill = treatment)) +
+  geom_boxplot(outlier.shape=NA,alpha=0.8,width = 0.4)+
+  geom_jitter(alpha=0.4, width = 0.3)+ 
+  guides(fill="none")+
+  ggtitle("F233 - Nocardioides")+
+  xlab("Treatment") +
+  ylab("Relative abundance [%]") +
+  scale_fill_manual(values=c("darkgoldenrod1","cornflowerblue","aquamarine3")) +
+  scale_y_continuous(limits=c(-0.03,0.07))+
+ # facet_wrap(~SynComStrain, scales = "free") +
+  stat_compare_means(comparisons=my.comparison,method="wilcox.test")+
+  theme_classic() +
+ # scale_color_manual()+
+  labs(x = "Treatment",
+       title = "F233",
+       color = "Treatment")
+
+
+
+
+fig7b <- plot_grid(F201 + labs(colour=""),
+                F247 + labs(colour=""),
+                F112 + labs(colour=""),
+                F004 + labs(colour=""),
+                F125 + labs(colour=""),
+                NULL,
+               labels=c("A","B","C","D","E"),
+               align = "hv",
+               rel_heights = c(1,1),
+               nrow=2, ncol=3, label_size = 11)
+fig7b
+#ggsave("fig7b.png", height=7, width=10)
+
+```
+**Conclusion** It seems that the different treatments don't influence the colonization of the roots by SynCom members. Except for *Domibacillus* F004 where we have significant difference between low P and high P treatment. 
+
+\vspace{5mm}
 ### Figure 8 | Calculation of mean values 
-{r mean, echo=F, warning=F, message=F }
+```{r mean, echo=F, warning=F, message=F }
 #library(rstatix)
 # subset (only roots)
 roots_syn<- subset(bPHYSEQ_Syn_melt, type=="roots")
@@ -680,7 +848,7 @@ fig8 <- total2%>%
 
 fig8
 #ggsave("fig8.1.png", height=6, width=4)
-
+```
 
 
 ```{r export RDA files, echo=F, warning=F, message=F}
