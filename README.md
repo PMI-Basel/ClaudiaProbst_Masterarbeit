@@ -6,6 +6,7 @@ This folder contain all analyses that were carried out during this master's thes
     - Phosphate starvation response (AT4)
     - Nitrogen stravation response (CEPD2) 
 3. Screening of PSB strains 
-    - NBRIP screening 
+    - NBRIP plate screening 
+    - NBRIP liquid culture screening
 4. Microbiota analysis
     - hamPCR + 16S sequencing
