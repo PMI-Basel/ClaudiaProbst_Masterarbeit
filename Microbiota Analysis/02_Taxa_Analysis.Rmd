@@ -849,6 +849,8 @@ fig8.1 <- total2%>%
 fig8.1
 #ggsave("fig8.1.png", height=6, width=4)
 
+# subset (only roots)
+roots_syn<- subset(df, type=="roots")
 #means absolute abundance
 
 mean<-aggregate(roots_syn$Abundance_corrected,by= list(roots_syn$SynComStrain, roots_syn$treatment), mean)
