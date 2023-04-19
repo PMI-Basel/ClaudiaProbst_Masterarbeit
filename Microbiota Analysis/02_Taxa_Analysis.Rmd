@@ -816,7 +816,7 @@ fig7b
 # subset (only roots)
 roots_syn<- subset(bPHYSEQ_Syn_melt, type=="roots")
 
-#means
+#means relative abundance
 
 mean<-aggregate(roots_syn$Abundance,by= list(roots_syn$SynComStrain, roots_syn$treatment), mean)
 
@@ -834,11 +834,11 @@ se<-(total$sd/sqrt(total$n)	)
 
 total2<- cbind(total, se)
 
-fig8 <- total2%>% 
+fig8.1 <- total2%>% 
   group_by(treat)%>%
   ggplot(aes(x=treat, y=mean_abundance,fill=Syn)) + 
   geom_bar(stat="identity", position="stack")+
-  geom_errorbar(aes(ymin=abundance-2*se, ymax=abundance+2*se), width=.1, position = "identity")+
+ # geom_errorbar(aes(ymin=Abundance-2*se, ymax=Abundance+2*se), width=.1, position = "identity")+
   ylab("Relative abundance [%]") +
  scale_fill_manual(values=TAX_level_cols_SynCom) +
   guides(fill=guide_legend(title="SynCom"))+
@@ -846,8 +846,42 @@ fig8 <- total2%>%
   ggtitle("Mean Abundance per Treatment")+
   theme(axis.ticks.x=element_blank(), legend.position = "right", axis.text.x = element_text(), axis.title.x = element_blank())
 
-fig8
+fig8.1
 #ggsave("fig8.1.png", height=6, width=4)
+
+#means absolute abundance
+
+mean<-aggregate(roots_syn$Abundance_corrected,by= list(roots_syn$SynComStrain, roots_syn$treatment), mean)
+
+sd<-aggregate(roots_syn$Abundance_corrected,by= list(roots_syn$SynComStrain, roots_syn$treatment), FUN=sd)
+
+n<-aggregate(roots_syn$Abundance_corrected,by= list(roots_syn$SynComStrain, roots_syn$treatment), FUN=length)
+
+
+tot<-cbind(mean, sd, n)
+total<- tot[,-c(4,5,7,8)]
+
+colnames(total)<- c("Syn", "treat", "mean_abundance", "sd_abundance", "n")
+
+se<-(total$sd/sqrt(total$n)	)						
+
+total2<- cbind(total, se)
+
+fig8.2 <- total2%>% 
+  group_by(treat)%>%
+  ggplot(aes(x=treat, y=mean_abundance,fill=Syn)) + 
+  geom_bar(stat="identity", position="stack")+
+ # geom_errorbar(aes(ymin=Abundance-2*se, ymax=Abundance+2*se), width=.1, position = "identity")+
+  ylab("Bacteria Sequences / Plant Sequence") +
+ scale_fill_manual(values=TAX_level_cols_SynCom) +
+  guides(fill=guide_legend(title="SynCom"))+
+  theme_bw()+
+  ggtitle("Mean Abundance per Treatment")+
+  theme(axis.ticks.x=element_blank(), legend.position = "right", axis.text.x = element_text(), axis.title.x = element_blank())
+
+fig8.2
+
+#ggsave("fig8.2.png", height=6, width=4)
 ```
 
 
