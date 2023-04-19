@@ -917,7 +917,7 @@ ggsave("OD453_strains_Ca.png")
 
 ```{r OD453 BPB, echo=F, message=F, warning=F}
 
-results_OD453%>%
+BPB<- results_OD453%>%
    mutate(Treat = factor(Treat, levels = c ( 
                 "1/2 TSB (no bacteria)",
                 "NBRIP no phosphate",
@@ -947,14 +947,16 @@ results_OD453%>%
 ggplot(aes(x=hrs, y= Density_increase, color=Treat)) +
   geom_smooth (method="auto", se=FALSE, size=0.5)+
   # stat_summary(geom = "pointrange", fun.y = mean, fun.ymax = max, fun.ymin = min, alpha = 0.3) +
-  facet_wrap(~Strain, scales = "free", ncol=3) +
+  facet_wrap(~Strain, scales = "free", ncol=2) +
   theme_bw() +
   scale_color_discrete(name = "Treatment", labels = c("- P", "+ Ca3(PO4)2", "+ 1mM K2HPO4","+ 10mM K2HPO4" ))+
   labs(x = "Time [hours]",
        y = "OD 453", 
-       title = "SynCom9 growth curves @OD453",
-       subtitle= "Strain performance in NBRIP medium supplemented with bromophenol blue")
-ggsave("OD453_strains_BPB.png")
+       title = "NBRIP medium with BPB")+
+   theme(legend.position = "none")
+BPB
+ggsave("OD453_strains_BPB.png",width = 5, height=7 )
+
 ```
 
 
@@ -963,7 +965,7 @@ ggsave("OD453_strains_BPB.png")
 
 ```{r no BPB,  echo=F, message=F, warning=F}
 
-results_OD453%>%
+no_BPB<- results_OD453%>%
    mutate(Treat = factor(Treat, levels = c ( 
                 "1/2 TSB (no bacteria)",
                 "NBRIP no phosphate",
@@ -993,14 +995,24 @@ results_OD453%>%
 ggplot(aes(x=hrs, y= Density_increase, color=Treat)) +
   geom_smooth (method="auto", se=FALSE, size=0.5)+
   # stat_summary(geom = "pointrange", fun.y = mean, fun.ymax = max, fun.ymin = min, alpha = 0.3) +
-  facet_wrap(~Strain, scales = "free", ncol=3) +
+  facet_wrap(~Strain, scales = "free", ncol=2) +
   scale_color_discrete(name = "Treatment", labels = c("- P", "+ Ca3(PO4)2", "+ 1mM K2HPO4","+ 10mM K2HPO4" ))+
   theme_bw() +
   labs(x = "Time [hours]",
        y = "OD 453", 
-       title = "SynCom9 growth curves @OD453",
-              subtitle= "Strain performance in NBRIP medium without bromophenol blue")
-ggsave("OD453_strains_noBPB.png")
+       title = "NBRIP medium without BPB")
+no_BPB
+ggsave("OD453_strains_noBPB.png",width = 5, height=7)
+
+
+fig <- plot_grid(BPB + labs(colour=""),
+                no_BPB + labs(colour=""),
+               labels=c("A","B"),
+               align = "h",
+               rel_widths= c(1,1.6),
+               nrow=1, ncol=2, label_size = 11)
+fig
+ggsave("fig.png")
 ```
 
 
