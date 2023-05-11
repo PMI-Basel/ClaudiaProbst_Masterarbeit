@@ -669,7 +669,6 @@ pander(t(similarities))
 #remove OTUs
 ASVs_to_remove <- colnames(similarities)[similarities[1,]<0.99]
 bDAT <- bDAT_keep[!(rownames(bDAT_keep) %in% ASVs_to_remove),]
-ASVs_to_remove <- names(which(colSums(bDAT_keep) == 0))
 bDAT <- bDAT_keep[,!(colnames(bDAT_keep) %in% ASVs_to_remove)]
 TAX <- TAX[!(rownames(TAX) %in% ASVs_to_remove),]
 
